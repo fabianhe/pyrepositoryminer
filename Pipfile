@@ -4,6 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+typer = "*"
+pygit2 = "*"
 
 [dev-packages]
 black = "*"
@@ -12,6 +14,7 @@ flake8 = "*"
 isort = "*"
 pytest = "*"
 pre-commit = "*"
+pyrepositoryminer = {editable = true, path = "."}
 
 [requires]
 python_version = "3.9"
