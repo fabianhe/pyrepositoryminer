@@ -22,4 +22,7 @@ setup(
     ],
     packages=find_packages(),
     python_requires=">=3.6",
+    entry_points={
+        "console_scripts": ["pyrepositoryminer=pyrepositoryminer.main:app"],
+    },
 )
