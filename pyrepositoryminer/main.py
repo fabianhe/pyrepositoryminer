@@ -36,9 +36,13 @@ def get_loc(tree: Tree) -> int:
 
 
 @app.command()
-def clone(url: str, path: Path) -> None:
+def clone(
+    url: str,
+    path: Path,
+    bare: bool = True,
+) -> None:
     "Clone a repository to a path."
-    clone_repository(url, path)
+    clone_repository(url, path, bare=bare)
     echo(f"Cloned {url} to {path}")
 
 
@@ -72,7 +76,7 @@ def filecount(url: str, checkout_branch: str) -> None:
     """Get the number of files per commit."""
     with TemporaryDirectory() as tmpdirname:
         repo: Repository = clone_repository(
-            url, tmpdirname, checkout_branch=checkout_branch
+            url, tmpdirname, checkout_branch=checkout_branch, bare=True
         )
         for commit in repo.walk(
             repo.head.target, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE
@@ -85,7 +89,7 @@ def loc(url: str, checkout_branch: str) -> None:
     """Get the lines of code per commit."""
     with TemporaryDirectory() as tmpdirname:
         repo: Repository = clone_repository(
-            url, tmpdirname, checkout_branch=checkout_branch
+            url, tmpdirname, checkout_branch=checkout_branch, bare=True
         )
         for commit in repo.walk(
             repo.head.target, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE
