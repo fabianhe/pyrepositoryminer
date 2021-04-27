@@ -7,6 +7,7 @@ from pygit2 import (
     Blob,
     Repository,
     Tree,
+    Walker,
     clone_repository,
 )
 from typer import Typer, echo
@@ -47,19 +48,17 @@ def clone(
 
 
 @app.command()
-def local_filecount(path: Path) -> None:
+def local_filecount(path: Path, simplify_first_parent: bool = True) -> None:
     """Get the number of files per commit in each branch in a local repository."""
     repo = Repository(path)
-    for branch_name in (
-        branch_name for branch_name in repo.branches if branch_name != "origin/HEAD"
-    ):
+    for branch_name in repo.branches:
         branch = repo.branches[branch_name]
-        if not branch.is_checked_out():
-            ref = repo.lookup_reference(branch.name)
-            repo.checkout(ref)
-        for commit in repo.walk(
-            repo.head.target, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE
-        ):
+        walker: Walker = repo.walk(
+            branch.peel().id, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE
+        )
+        if simplify_first_parent:
+            walker.simplify_first_parent()
+        for commit in walker:
             echo(
                 "{:s},{:d},{:s},{:d}".format(
                     branch_name,
@@ -68,30 +67,33 @@ def local_filecount(path: Path) -> None:
                     get_filecount(commit.tree),
                 )
             )
-        repo.checkout("HEAD")
 
 
 @app.command()
-def filecount(url: str, checkout_branch: str) -> None:
+def filecount(
+    url: str, checkout_branch: str, simplify_first_parent: bool = True
+) -> None:
     """Get the number of files per commit."""
     with TemporaryDirectory() as tmpdirname:
         repo: Repository = clone_repository(
             url, tmpdirname, checkout_branch=checkout_branch, bare=True
         )
-        for commit in repo.walk(
-            repo.head.target, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE
-        ):
+        walker = repo.walk(repo.head.target, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE)
+        if simplify_first_parent:
+            walker.simplify_first_parent()
+        for commit in walker:
             echo(f"{commit.id},{get_filecount(commit.tree)}")
 
 
 @app.command()
-def loc(url: str, checkout_branch: str) -> None:
+def loc(url: str, checkout_branch: str, simplify_first_parent: bool = True) -> None:
     """Get the lines of code per commit."""
     with TemporaryDirectory() as tmpdirname:
         repo: Repository = clone_repository(
             url, tmpdirname, checkout_branch=checkout_branch, bare=True
         )
-        for commit in repo.walk(
-            repo.head.target, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE
-        ):
+        walker = repo.walk(repo.head.target, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE)
+        if simplify_first_parent:
+            walker.simplify_first_parent()
+        for commit in walker:
             echo(f"{commit.id},{get_loc(commit.tree)}")
