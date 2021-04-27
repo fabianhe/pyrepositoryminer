@@ -1,5 +1,6 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Iterable
 
 from pygit2 import (
     GIT_SORT_REVERSE,
@@ -25,6 +26,20 @@ def clone(
     "Clone a repository to a path."
     clone_repository(url, path, bare=bare)
     echo(f"Cloned {url} to {path}")
+
+
+@app.command()
+def branch(path: Path, local: bool = True, remote: bool = True) -> None:
+    repo = Repository(path)
+    branches: Iterable[str] = tuple()
+    if local and remote:
+        branches = repo.branches
+    elif local and not remote:
+        branches = repo.branches.local
+    elif not local and remote:
+        branches = repo.branches.remote
+    for branch_name in branches:
+        echo(branch_name)
 
 
 @app.command()
