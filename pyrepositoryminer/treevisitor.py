@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, List, Tuple
 
 from pygit2 import Blob, Tree
+from radon.complexity import cc_visit
 
 from .visitableobject import VisitableBlob, VisitableTree
 
@@ -49,3 +50,20 @@ class FilecountVisitor(TreeVisitor):
     @property
     def result(self) -> int:
         return self.n
+
+
+class ComplexityVisitor(TreeVisitor):
+    def __init__(self) -> None:
+        super().__init__()
+        self.complexities: List[Tuple[str, str]] = []
+
+    def visitBlob(self, blob: VisitableBlob) -> None:
+        if blob.obj.name.endswith(".py"):
+            if complexities := cc_visit(blob.obj.data):
+                self.complexities.append(
+                    (blob.obj.id, max(obj.complexity for obj in complexities))
+                )
+
+    @property
+    def result(self) -> List[Tuple[str, str]]:
+        return self.complexities

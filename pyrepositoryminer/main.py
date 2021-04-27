@@ -5,16 +5,29 @@ from typing import Iterable
 from pygit2 import (
     GIT_SORT_REVERSE,
     GIT_SORT_TOPOLOGICAL,
+    Commit,
     Repository,
     Walker,
     clone_repository,
 )
 from typer import Typer, echo
 
-from .treevisitor import FilecountVisitor, LocVisitor
+from .treevisitor import ComplexityVisitor, FilecountVisitor, LocVisitor
 from .visitableobject import VisitableTree
 
 app = Typer()
+
+
+def walk_commits(
+    repo: Repository, branch_name: str, simplify_first_parent: bool
+) -> Iterable[Commit]:
+    branch = repo.branches[branch_name]
+    walker: Walker = repo.walk(
+        branch.peel().id, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE
+    )
+    if simplify_first_parent:
+        walker.simplify_first_parent()
+    yield from walker
 
 
 @app.command()
@@ -43,23 +56,30 @@ def branch(path: Path, local: bool = True, remote: bool = True) -> None:
 
 
 @app.command()
+def complexity(path: Path, simplify_first_parent: bool = True) -> None:
+    """Get the maximum complexity per file per commit per branch.
+
+    Currently, only Python files are supported."""
+    repo = Repository(path)
+    for branch_name in repo.branches:
+        for commit in walk_commits(repo, branch_name, simplify_first_parent):
+            visitor = ComplexityVisitor()
+            visitor.visitTree(VisitableTree(commit.tree))
+            for blob_id, max_complexity in visitor.result:
+                echo(f"{branch_name},{str(commit.id)},{blob_id},{max_complexity}")
+
+
+@app.command()
 def local_filecount(path: Path, simplify_first_parent: bool = True) -> None:
     """Get the number of files per commit in each branch in a local repository."""
     repo = Repository(path)
     for branch_name in repo.branches:
-        branch = repo.branches[branch_name]
-        walker: Walker = repo.walk(
-            branch.peel().id, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE
-        )
-        if simplify_first_parent:
-            walker.simplify_first_parent()
-        for commit in walker:
+        for commit in walk_commits(repo, branch_name, simplify_first_parent):
             visitor = FilecountVisitor()
             visitor.visitTree(VisitableTree(commit.tree))
             echo(
-                "{:s},{:d},{:s},{:d}".format(
+                "{:s},{:s},{:d}".format(
                     branch_name,
-                    commit.commit_time,
                     str(commit.id),
                     visitor.result,
                 )
@@ -75,13 +95,10 @@ def filecount(
         repo: Repository = clone_repository(
             url, tmpdirname, checkout_branch=checkout_branch, bare=True
         )
-        walker = repo.walk(repo.head.target, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE)
-        if simplify_first_parent:
-            walker.simplify_first_parent()
-        for commit in walker:
+        for commit in walk_commits(repo, repo.head.shorthand, simplify_first_parent):
             visitor = FilecountVisitor()
             visitor.visitTree(VisitableTree(commit.tree))
-            echo(f"{commit.id},{visitor.result}")
+            echo(f"{repo.head.shorthand},{commit.id},{visitor.result}")
 
 
 @app.command()
@@ -91,10 +108,7 @@ def loc(url: str, checkout_branch: str, simplify_first_parent: bool = True) -> N
         repo: Repository = clone_repository(
             url, tmpdirname, checkout_branch=checkout_branch, bare=True
         )
-        walker = repo.walk(repo.head.target, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE)
-        if simplify_first_parent:
-            walker.simplify_first_parent()
-        for commit in walker:
+        for commit in walk_commits(repo, repo.head.shorthand, simplify_first_parent):
             visitor = LocVisitor()
             visitor.visitTree(VisitableTree(commit.tree))
-            echo(f"{commit.id},{visitor.result}")
+            echo(f"{repo.head.shorthand},{commit.id},{visitor.result}")
