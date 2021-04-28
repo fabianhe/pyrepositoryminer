@@ -3,6 +3,7 @@ from typing import Any, List, Tuple
 
 from pygit2 import Blob, Tree
 from radon.complexity import cc_visit
+from radon.raw import Module, analyze
 
 from .visitableobject import VisitableBlob, VisitableTree
 
@@ -67,3 +68,18 @@ class ComplexityVisitor(TreeVisitor):
     @property
     def result(self) -> List[Tuple[str, str]]:
         return self.complexities
+
+
+class RawVisitor(TreeVisitor):
+    def __init__(self) -> None:
+        super().__init__()
+        self.metrics: List[Module] = []
+
+    def visitBlob(self, blob: VisitableBlob) -> None:
+        if blob.obj.name.endswith(".py"):
+            data: Module = analyze(blob.obj.data.decode())
+            self.metrics.append(data)
+
+    @property
+    def result(self) -> List[Module]:
+        return self.metrics
