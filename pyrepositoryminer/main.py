@@ -63,10 +63,14 @@ def complexity(path: Path, simplify_first_parent: bool = True) -> None:
     repo = Repository(path)
     for branch_name in repo.branches:
         for commit in walk_commits(repo, branch_name, simplify_first_parent):
-            visitor = ComplexityVisitor()
-            visitor.visitTree(VisitableTree(commit.tree))
-            for blob_id, max_complexity in visitor.result:
-                echo(f"{branch_name},{str(commit.id)},{blob_id},{max_complexity}")
+            for blob_id, max_complexity in (
+                ComplexityVisitor().visitTree(VisitableTree(commit.tree)).result
+            ):
+                echo(
+                    "{:s},{:s},{:s},{:d}".format(
+                        branch_name, str(commit.id), str(blob_id), max_complexity
+                    )
+                )
 
 
 @app.command()
@@ -85,9 +89,7 @@ def raw(path: Path, simplify_first_parent: bool = True) -> None:
     repo = Repository(path)
     for branch_name in repo.branches:
         for commit in walk_commits(repo, branch_name, simplify_first_parent):
-            visitor = RawVisitor()
-            visitor.visitTree(VisitableTree(commit.tree))
-            for result in visitor.result:
+            for result in RawVisitor().visitTree(VisitableTree(commit.tree)).result:
                 echo(
                     "{:s},{:s},{:d},{:d},{:d}".format(
                         branch_name,
@@ -105,13 +107,11 @@ def filecount(path: Path, simplify_first_parent: bool = True) -> None:
     repo = Repository(path)
     for branch_name in repo.branches:
         for commit in walk_commits(repo, branch_name, simplify_first_parent):
-            visitor = FilecountVisitor()
-            visitor.visitTree(VisitableTree(commit.tree))
             echo(
                 "{:s},{:s},{:d}".format(
                     branch_name,
                     str(commit.id),
-                    visitor.result,
+                    FilecountVisitor().visitTree(VisitableTree(commit.tree)).result,
                 )
             )
 
@@ -126,9 +126,13 @@ def remote_filecount(
             url, tmpdirname, checkout_branch=checkout_branch, bare=True
         )
         for commit in walk_commits(repo, repo.head.shorthand, simplify_first_parent):
-            visitor = FilecountVisitor()
-            visitor.visitTree(VisitableTree(commit.tree))
-            echo(f"{repo.head.shorthand},{commit.id},{visitor.result}")
+            echo(
+                "{:s},{:s},{:d}".format(
+                    repo.head.shorthand,
+                    str(commit.id),
+                    FilecountVisitor().visitTree(VisitableTree(commit.tree)).result,
+                )
+            )
 
 
 @app.command()
@@ -141,6 +145,10 @@ def remote_loc(
             url, tmpdirname, checkout_branch=checkout_branch, bare=True
         )
         for commit in walk_commits(repo, repo.head.shorthand, simplify_first_parent):
-            visitor = LocVisitor()
-            visitor.visitTree(VisitableTree(commit.tree))
-            echo(f"{repo.head.shorthand},{commit.id},{visitor.result}")
+            echo(
+                "{:s},{},{:d}".format(
+                    repo.head.shorthand,
+                    str(commit.id),
+                    LocVisitor().visitTree(VisitableTree(commit.tree)).result,
+                )
+            )
