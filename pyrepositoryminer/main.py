@@ -12,7 +12,13 @@ from pygit2 import (
 )
 from typer import Typer, echo
 
-from .treevisitor import ComplexityVisitor, FilecountVisitor, LocVisitor, RawVisitor
+from .treevisitor import (
+    ComplexityVisitor,
+    FilecountVisitor,
+    LocVisitor,
+    NestingVisitor,
+    RawVisitor,
+)
 from .visitableobject import VisitableTree
 
 app = Typer()
@@ -63,12 +69,12 @@ def complexity(path: Path, simplify_first_parent: bool = True) -> None:
     repo = Repository(path)
     for branch_name in repo.branches:
         for commit in walk_commits(repo, branch_name, simplify_first_parent):
-            for blob_id, max_complexity in (
+            for blob_id, result in (
                 ComplexityVisitor().visitTree(VisitableTree(commit.tree)).result
             ):
                 echo(
                     "{:s},{:s},{:s},{:d}".format(
-                        branch_name, str(commit.id), str(blob_id), max_complexity
+                        branch_name, str(commit.id), str(blob_id), result
                     )
                 )
 
@@ -89,14 +95,36 @@ def raw(path: Path, simplify_first_parent: bool = True) -> None:
     repo = Repository(path)
     for branch_name in repo.branches:
         for commit in walk_commits(repo, branch_name, simplify_first_parent):
-            for result in RawVisitor().visitTree(VisitableTree(commit.tree)).result:
+            for blob_id, result in (
+                RawVisitor().visitTree(VisitableTree(commit.tree)).result
+            ):
                 echo(
-                    "{:s},{:s},{:d},{:d},{:d}".format(
+                    "{:s},{:s},{:s},{:d},{:d},{:d}".format(
                         branch_name,
                         str(commit.id),
+                        str(blob_id),
                         result.loc,
                         result.lloc,
                         result.sloc,
+                    )
+                )
+
+
+@app.command()
+def nesting(path: Path, simplify_first_parent: bool = True) -> None:
+    """Get nesting level per file per commit per branch."""
+    repo = Repository(path)
+    for branch_name in repo.branches:
+        for commit in walk_commits(repo, branch_name, simplify_first_parent):
+            for blob_id, result in (
+                NestingVisitor().visitTree(VisitableTree(commit.tree)).result
+            ):
+                echo(
+                    "{:s},{:s},{:s},{:d}".format(
+                        branch_name,
+                        str(commit.id),
+                        str(blob_id),
+                        result,
                     )
                 )
 
