@@ -3,17 +3,7 @@ from enum import Enum
 from itertools import chain
 from pathlib import Path
 from sys import stdin
-from typing import (
-    DefaultDict,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypedDict,
-)
+from typing import DefaultDict, Iterable, List, Optional, Set, Tuple, TypedDict
 
 from pygit2 import (
     GIT_SORT_NONE,
@@ -25,20 +15,11 @@ from pygit2 import (
     Walker,
     clone_repository,
 )
-from typer import Argument, FileText, Typer, echo
+from typer import Argument, FileText, Option, Typer, echo
+
+from pyrepositoryminer.metrics import BlobMetrics, TreeMetrics, UnitMetrics
 
 from .helper import BlobOutput, Metric, UnitOutput, format_output, parse_commit
-from .treevisitor import (
-    BlobMetric,
-    ComplexityVisitor,
-    FilecountVisitor,
-    LineLengthVisitor,
-    LocVisitor,
-    NestingVisitor,
-    RawVisitor,
-    TreeMetric,
-    UnitMetric,
-)
 from .visitableobject import VisitableTree
 
 app = Typer()
@@ -57,22 +38,6 @@ class blobhelper(TypedDict):
 blobshelper = DefaultDict[str, blobhelper]
 
 
-TREE_METRICS: Dict[str, Type[TreeMetric]] = {
-    "filecount": FilecountVisitor,
-    "loc": LocVisitor,
-}
-
-BLOB_METRICS: Dict[str, Type[BlobMetric]] = {
-    "nesting": NestingVisitor,
-    "raw": RawVisitor,
-}
-
-UNIT_METRICS: Dict[str, Type[UnitMetric]] = {
-    "complexity": ComplexityVisitor,
-    "linelength": LineLengthVisitor,
-}
-
-
 def validate_metrics(
     metrics: Optional[Iterable[str]],
 ) -> Tuple[Set[str], Set[str], Set[str]]:
@@ -80,9 +45,9 @@ def validate_metrics(
         return (set(), set(), set())
     distinct = set(metrics)
     return (
-        distinct.intersection(TREE_METRICS.keys()),
-        distinct.intersection(BLOB_METRICS.keys()),
-        distinct.intersection(UNIT_METRICS.keys()),
+        distinct.intersection(TreeMetrics.keys()),
+        distinct.intersection(BlobMetrics.keys()),
+        distinct.intersection(UnitMetrics.keys()),
     )
 
 
@@ -116,7 +81,7 @@ def commits(
     branches: Optional[FileText] = None,
     simplify_first_parent: bool = True,
     drop_duplicates: bool = False,
-    sort: Optional[Sort] = None,
+    sort: Optional[Sort] = Option(None, case_sensitive=False),
     sort_reverse: bool = False,
 ) -> None:
     repo = Repository(repository)
@@ -158,19 +123,19 @@ def analyze(
             lambda: {"metrics": [], "units": defaultdict(list)}
         )
         for m in unit_m:
-            for res in UNIT_METRICS[m]().visitTree(VisitableTree(commit.tree)).result:
+            for res in UnitMetrics[m]().visitTree(VisitableTree(commit.tree)).result:
                 blobs[res.blob_id]["units"][res.unit_id].append(
                     Metric(name=m, value=res.value)
                 )
         for m in blob_m:
-            for res in BLOB_METRICS[m]().visitTree(VisitableTree(commit.tree)).result:
+            for res in BlobMetrics[m]().visitTree(VisitableTree(commit.tree)).result:
                 blobs[res.blob_id]["metrics"].append(Metric(name=m, value=res.value))
         d = parse_commit(
             commit,
             metrics=[
                 Metric(
                     name=m,
-                    value=TREE_METRICS[m]()
+                    value=TreeMetrics[m]()
                     .visitTree(VisitableTree(commit.tree))
                     .result.value,
                 )
