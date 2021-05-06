@@ -1,4 +1,6 @@
 from collections import defaultdict
+from enum import Enum
+from itertools import chain
 from pathlib import Path
 from sys import stdin
 from typing import (
@@ -14,7 +16,9 @@ from typing import (
 )
 
 from pygit2 import (
+    GIT_SORT_NONE,
     GIT_SORT_REVERSE,
+    GIT_SORT_TIME,
     GIT_SORT_TOPOLOGICAL,
     Commit,
     Repository,
@@ -38,6 +42,11 @@ from .treevisitor import (
 from .visitableobject import VisitableTree
 
 app = Typer()
+
+
+class Sort(str, Enum):
+    topological = "topological"
+    time = "time"
 
 
 class blobhelper(TypedDict):
@@ -99,6 +108,39 @@ def walk_commits(
     if simplify_first_parent:
         walker.simplify_first_parent()
     yield from walker
+
+
+@app.command()
+def commits(
+    repository: Path,
+    branches: Optional[FileText] = None,
+    simplify_first_parent: bool = True,
+    drop_duplicates: bool = False,
+    sort: Optional[Sort] = None,
+    sort_reverse: bool = False,
+) -> None:
+    repo = Repository(repository)
+    sorting = GIT_SORT_NONE
+    if sort == "topological":
+        sorting = GIT_SORT_TOPOLOGICAL
+    elif sort == "time":
+        sorting = GIT_SORT_TIME
+    if sort_reverse:
+        sorting |= GIT_SORT_REVERSE
+    walkers = []
+    for branch_name in (
+        branch_name.strip() for branch_name in (stdin if branches is None else branches)
+    ):
+        branch = repo.branches[branch_name]
+        walker: Walker = repo.walk(branch.peel().id)
+        if simplify_first_parent:
+            walker.simplify_first_parent()
+        walkers.append(walker)
+    all_commits: Iterable[Commit] = chain(*walkers)
+    if drop_duplicates:
+        all_commits = set(all_commits)
+    for commit in all_commits:
+        echo(str(commit.id))
 
 
 @app.command()
@@ -171,86 +213,3 @@ def branch(path: Path, local: bool = True, remote: bool = True) -> None:
         branches = repo.branches.remote
     for branch_name in branches:
         echo(branch_name)
-
-
-@app.command()
-def complexity(path: Path, simplify_first_parent: bool = True) -> None:
-    """Get the maximum complexity per file per commit per branch.
-
-    Currently, only Python files are supported."""
-    repo = Repository(path)
-    for branch_name in repo.branches:
-        for commit in walk_commits(repo, branch_name, simplify_first_parent):
-            for blob_id, result in (
-                ComplexityVisitor().visitTree(VisitableTree(commit.tree)).result
-            ):
-                echo(
-                    "{:s},{:s},{:s},{:d}".format(
-                        branch_name, str(commit.id), str(blob_id), result
-                    )
-                )
-
-
-@app.command()
-def raw(path: Path, simplify_first_parent: bool = True) -> None:
-    """Get raw metrics per file per commit per branch.
-
-    Currently, only Python files are supported.
-    Raw metrics are:
-    1. LOC:
-       The number of lines of code (total)
-    2. LLOC:
-       The number of logical lines of code
-    3. SLOC:
-       The number of source lines of code (not necessarily corresponding to the LLOC)
-    """
-    repo = Repository(path)
-    for branch_name in repo.branches:
-        for commit in walk_commits(repo, branch_name, simplify_first_parent):
-            for blob_id, result in (
-                RawVisitor().visitTree(VisitableTree(commit.tree)).result
-            ):
-                echo(
-                    "{:s},{:s},{:s},{:d},{:d},{:d}".format(
-                        branch_name,
-                        str(commit.id),
-                        str(blob_id),
-                        result.loc,
-                        result.lloc,
-                        result.sloc,
-                    )
-                )
-
-
-@app.command()
-def nesting(path: Path, simplify_first_parent: bool = True) -> None:
-    """Get nesting level per file per commit per branch."""
-    repo = Repository(path)
-    for branch_name in repo.branches:
-        for commit in walk_commits(repo, branch_name, simplify_first_parent):
-            for blob_id, result in (
-                NestingVisitor().visitTree(VisitableTree(commit.tree)).result
-            ):
-                echo(
-                    "{:s},{:s},{:s},{:d}".format(
-                        branch_name,
-                        str(commit.id),
-                        str(blob_id),
-                        result,
-                    )
-                )
-
-
-@app.command()
-def filecount(path: Path, simplify_first_parent: bool = True) -> None:
-    """Get the number of files per commit in each branch in a local repository."""
-    repo = Repository(path)
-    for branch_name in repo.branches:
-        for commit in walk_commits(repo, branch_name, simplify_first_parent):
-            echo(
-                "{:s},{:s},{:d}".format(
-                    branch_name,
-                    str(commit.id),
-                    FilecountVisitor().visitTree(VisitableTree(commit.tree)).result,
-                )
-            )
