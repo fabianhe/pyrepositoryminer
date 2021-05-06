@@ -1,6 +1,18 @@
+from collections import defaultdict
 from pathlib import Path
+from sys import stdin
 from tempfile import TemporaryDirectory
-from typing import Iterable
+from typing import (
+    DefaultDict,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypedDict,
+)
 
 from pygit2 import (
     GIT_SORT_REVERSE,
@@ -10,18 +22,70 @@ from pygit2 import (
     Walker,
     clone_repository,
 )
-from typer import Typer, echo
+from typer import Argument, FileText, Typer, echo
 
+from .helper import BlobOutput, Metric, UnitOutput, format_output, parse_commit
 from .treevisitor import (
+    BlobMetric,
     ComplexityVisitor,
     FilecountVisitor,
+    LineLengthVisitor,
     LocVisitor,
     NestingVisitor,
     RawVisitor,
+    TreeMetric,
+    UnitMetric,
 )
 from .visitableobject import VisitableTree
 
 app = Typer()
+
+
+class blobhelper(TypedDict):
+    metrics: List[Metric]
+    units: DefaultDict[str, List[Metric]]
+
+
+blobshelper = DefaultDict[str, blobhelper]
+
+
+TREE_METRICS: Dict[str, Type[TreeMetric]] = {
+    "filecount": FilecountVisitor,
+    "loc": LocVisitor,
+}
+
+BLOB_METRICS: Dict[str, Type[BlobMetric]] = {
+    "complexity": ComplexityVisitor,
+    "nesting": NestingVisitor,
+    "raw": RawVisitor,
+}
+
+UNIT_METRICS: Dict[str, Type[UnitMetric]] = {"linelength": LineLengthVisitor}
+
+
+def validate_metrics(
+    metrics: Optional[Iterable[str]],
+) -> Tuple[Set[str], Set[str], Set[str]]:
+    if metrics is None:
+        return (set(), set(), set())
+    distinct = set(metrics)
+    return (
+        distinct.intersection(TREE_METRICS.keys()),
+        distinct.intersection(BLOB_METRICS.keys()),
+        distinct.intersection(UNIT_METRICS.keys()),
+    )
+
+
+def validate_commits(
+    repository: Repository, commit_ids: Iterable[str]
+) -> Iterable[Commit]:
+    for commit_id in commit_ids:
+        try:
+            obj = repository.get(commit_id)
+        except ValueError:
+            pass
+        if obj is not None and isinstance(obj, Commit):
+            yield obj
 
 
 def walk_commits(
@@ -34,6 +98,54 @@ def walk_commits(
     if simplify_first_parent:
         walker.simplify_first_parent()
     yield from walker
+
+
+@app.command()
+def analyze(
+    repository: Path,
+    metrics: Optional[List[str]] = Argument(None),
+    commits: Optional[FileText] = None,
+) -> None:
+    tree_m, blob_m, unit_m = validate_metrics(metrics)
+    for commit in validate_commits(
+        Repository(repository),
+        (commit_id.strip() for commit_id in (stdin if commits is None else commits)),
+    ):
+        blobs: blobshelper = defaultdict(
+            lambda: {"metrics": [], "units": defaultdict(list)}
+        )
+        for m in unit_m:
+            for res in UNIT_METRICS[m]().visitTree(VisitableTree(commit.tree)).result:
+                blobs[res.blob_id]["units"][res.unit_id].append(
+                    Metric(name=m, value=res.value)
+                )
+        for m in blob_m:
+            for res in BLOB_METRICS[m]().visitTree(VisitableTree(commit.tree)).result:
+                blobs[res.blob_id]["metrics"].append(Metric(name=m, value=res.value))
+        d = parse_commit(
+            commit,
+            metrics=[
+                Metric(
+                    name=m,
+                    value=TREE_METRICS[m]()
+                    .visitTree(VisitableTree(commit.tree))
+                    .result.value,
+                )
+                for m in tree_m
+            ],
+            blobs=[
+                BlobOutput(
+                    id=str(blob_id),
+                    metrics=blob["metrics"],
+                    units=[
+                        UnitOutput(id=unit_id, metrics=unit)
+                        for unit_id, unit in blob["units"].items()
+                    ],
+                )
+                for blob_id, blob in blobs.items()
+            ],
+        )
+        echo(format_output(d))
 
 
 @app.command()

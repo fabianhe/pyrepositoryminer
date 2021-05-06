@@ -15,13 +15,29 @@ from ast import (
     parse,
     withitem,
 )
-from typing import Any, List, Tuple
+from dataclasses import dataclass
+from typing import Any, Iterable, List
 
 from pygit2 import Blob, Oid, Tree
 from radon.complexity import cc_visit
 from radon.raw import Module, analyze
 
 from .visitableobject import VisitableBlob, VisitableTree
+
+
+@dataclass(frozen=True)
+class TreeMetricOutput:
+    value: Any
+
+
+@dataclass(frozen=True)
+class BlobMetricOutput(TreeMetricOutput):
+    blob_id: Oid
+
+
+@dataclass(frozen=True)
+class UnitMetricOutput(BlobMetricOutput):
+    unit_id: str
 
 
 class NestingASTVisitor(NodeVisitor):
@@ -91,22 +107,42 @@ class TreeVisitor(ABC):
         pass
 
 
-class LocVisitor(TreeVisitor):
+class TreeMetric(TreeVisitor, ABC):
+    @property
+    @abstractmethod
+    def result(self) -> TreeMetricOutput:
+        pass
+
+
+class BlobMetric(TreeVisitor, ABC):
+    @property
+    @abstractmethod
+    def result(self) -> Iterable[BlobMetricOutput]:
+        pass
+
+
+class UnitMetric(TreeVisitor, ABC):
+    @property
+    @abstractmethod
+    def result(self) -> Iterable[UnitMetricOutput]:
+        pass
+
+
+class LocVisitor(TreeMetric):
     def __init__(self) -> None:
         super().__init__()
         self.n: int = 0
 
     def visitBlob(self, blob: VisitableBlob) -> LocVisitor:
-        if not blob.obj.is_binary:
-            self.n += len(blob.obj.data.split(b"\n"))
+        self.n += 0 if blob.obj.is_binary else len(blob.obj.data.split(b"\n"))
         return self
 
     @property
-    def result(self) -> int:
-        return self.n
+    def result(self) -> TreeMetricOutput:
+        return TreeMetricOutput(value=self.n)
 
 
-class FilecountVisitor(TreeVisitor):
+class FilecountVisitor(TreeMetric):
     def __init__(self) -> None:
         super().__init__()
         self.n: int = 0
@@ -116,55 +152,89 @@ class FilecountVisitor(TreeVisitor):
         return self
 
     @property
-    def result(self) -> int:
-        return self.n
+    def result(self) -> TreeMetricOutput:
+        return TreeMetricOutput(value=self.n)
 
 
-class ComplexityVisitor(TreeVisitor):
+class ComplexityVisitor(BlobMetric):
     def __init__(self) -> None:
         super().__init__()
-        self.complexities: List[Tuple[Oid, str]] = []
+        self.complexities: List[BlobMetricOutput] = []
 
     def visitBlob(self, blob: VisitableBlob) -> ComplexityVisitor:
         if blob.obj.name.endswith(".py"):
             if complexities := cc_visit(blob.obj.data):
                 self.complexities.append(
-                    (blob.obj.id, max(obj.complexity for obj in complexities))
+                    BlobMetricOutput(
+                        value=max(obj.complexity for obj in complexities),
+                        blob_id=blob.obj.id,
+                    )
                 )
+
         return self
 
     @property
-    def result(self) -> List[Tuple[Oid, str]]:
+    def result(self) -> Iterable[BlobMetricOutput]:
         return self.complexities
 
 
-class RawVisitor(TreeVisitor):
+class RawVisitor(BlobMetric):
     def __init__(self) -> None:
         super().__init__()
-        self.metrics: List[Tuple[Oid, Module]] = []
+        self.metrics: List[BlobMetricOutput] = []
 
     def visitBlob(self, blob: VisitableBlob) -> RawVisitor:
         if blob.obj.name.endswith(".py"):
             data: Module = analyze(blob.obj.data.decode())
-            self.metrics.append((blob.obj.id, data))
+            self.metrics.append(
+                BlobMetricOutput(
+                    value=data,
+                    blob_id=blob.obj.id,
+                )
+            )
+
         return self
 
     @property
-    def result(self) -> List[Tuple[Oid, Module]]:
+    def result(self) -> Iterable[BlobMetricOutput]:
         return self.metrics
 
 
-class NestingVisitor(TreeVisitor):
+class NestingVisitor(BlobMetric):
     def __init__(self) -> None:
         super().__init__()
-        self.metrics: List[Tuple[Oid, int]] = []
+        self.metrics: List[BlobMetricOutput] = []
 
     def visitBlob(self, blob: VisitableBlob) -> NestingVisitor:
         if blob.obj.name.endswith(".py"):
             m = parse(blob.obj.data)
-            self.metrics.append((blob.obj.id, NestingASTVisitor().visit(m).result))
+            self.metrics.append(
+                BlobMetricOutput(
+                    value=NestingASTVisitor().visit(m).result,
+                    blob_id=blob.obj.id,
+                )
+            )
         return self
 
     @property
-    def result(self) -> List[Tuple[Oid, int]]:
+    def result(self) -> Iterable[BlobMetricOutput]:
+        return self.metrics
+
+
+class LineLengthVisitor(UnitMetric):
+    def __init__(self) -> None:
+        super().__init__()
+        self.metrics: List[UnitMetricOutput] = []
+
+    def visitBlob(self, blob: VisitableBlob) -> LineLengthVisitor:
+        if blob.obj.is_binary:
+            return self
+        for i, line in enumerate(blob.obj.data.split(b"\n")):
+            self.metrics.append(
+                UnitMetricOutput(len(line), blob_id=blob.obj.id, unit_id=f"L{i+1}")
+            )
+        return self
+
+    @property
+    def result(self) -> Iterable[UnitMetricOutput]:
         return self.metrics
