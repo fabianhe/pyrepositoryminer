@@ -1,7 +1,6 @@
 from collections import defaultdict
 from pathlib import Path
 from sys import stdin
-from tempfile import TemporaryDirectory
 from typing import (
     DefaultDict,
     Dict,
@@ -251,43 +250,5 @@ def filecount(path: Path, simplify_first_parent: bool = True) -> None:
                     branch_name,
                     str(commit.id),
                     FilecountVisitor().visitTree(VisitableTree(commit.tree)).result,
-                )
-            )
-
-
-@app.command()
-def remote_filecount(
-    url: str, checkout_branch: str, simplify_first_parent: bool = True
-) -> None:
-    """Get the number of files per commit."""
-    with TemporaryDirectory() as tmpdirname:
-        repo: Repository = clone_repository(
-            url, tmpdirname, checkout_branch=checkout_branch, bare=True
-        )
-        for commit in walk_commits(repo, repo.head.shorthand, simplify_first_parent):
-            echo(
-                "{:s},{:s},{:d}".format(
-                    repo.head.shorthand,
-                    str(commit.id),
-                    FilecountVisitor().visitTree(VisitableTree(commit.tree)).result,
-                )
-            )
-
-
-@app.command()
-def remote_loc(
-    url: str, checkout_branch: str, simplify_first_parent: bool = True
-) -> None:
-    """Get the lines of code per commit."""
-    with TemporaryDirectory() as tmpdirname:
-        repo: Repository = clone_repository(
-            url, tmpdirname, checkout_branch=checkout_branch, bare=True
-        )
-        for commit in walk_commits(repo, repo.head.shorthand, simplify_first_parent):
-            echo(
-                "{:s},{},{:d}".format(
-                    repo.head.shorthand,
-                    str(commit.id),
-                    LocVisitor().visitTree(VisitableTree(commit.tree)).result,
                 )
             )
