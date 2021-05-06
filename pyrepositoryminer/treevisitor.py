@@ -156,26 +156,28 @@ class FilecountVisitor(TreeMetric):
         return TreeMetricOutput(value=self.n)
 
 
-class ComplexityVisitor(BlobMetric):
+class ComplexityVisitor(UnitMetric):
     def __init__(self) -> None:
         super().__init__()
-        self.complexities: List[BlobMetricOutput] = []
+        self.metrics: List[UnitMetricOutput] = []
 
     def visitBlob(self, blob: VisitableBlob) -> ComplexityVisitor:
         if blob.obj.name.endswith(".py"):
             if complexities := cc_visit(blob.obj.data):
-                self.complexities.append(
-                    BlobMetricOutput(
-                        value=max(obj.complexity for obj in complexities),
+                self.metrics.extend(
+                    UnitMetricOutput(
+                        unit_id=str(u.fullname),
+                        value=int(u.complexity),
                         blob_id=blob.obj.id,
                     )
+                    for u in complexities
                 )
 
         return self
 
     @property
-    def result(self) -> Iterable[BlobMetricOutput]:
-        return self.complexities
+    def result(self) -> Iterable[UnitMetricOutput]:
+        return self.metrics
 
 
 class RawVisitor(BlobMetric):
@@ -188,7 +190,7 @@ class RawVisitor(BlobMetric):
             data: Module = analyze(blob.obj.data.decode())
             self.metrics.append(
                 BlobMetricOutput(
-                    value=data,
+                    value=data._asdict(),
                     blob_id=blob.obj.id,
                 )
             )

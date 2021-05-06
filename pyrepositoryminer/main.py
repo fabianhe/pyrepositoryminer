@@ -54,12 +54,14 @@ TREE_METRICS: Dict[str, Type[TreeMetric]] = {
 }
 
 BLOB_METRICS: Dict[str, Type[BlobMetric]] = {
-    "complexity": ComplexityVisitor,
     "nesting": NestingVisitor,
     "raw": RawVisitor,
 }
 
-UNIT_METRICS: Dict[str, Type[UnitMetric]] = {"linelength": LineLengthVisitor}
+UNIT_METRICS: Dict[str, Type[UnitMetric]] = {
+    "complexity": ComplexityVisitor,
+    "linelength": LineLengthVisitor,
+}
 
 
 def validate_metrics(
