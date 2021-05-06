@@ -22,7 +22,7 @@ from pyrepositoryminer.metrics import BlobMetrics, TreeMetrics, UnitMetrics
 from .helper import BlobOutput, Metric, UnitOutput, format_output, parse_commit
 from .visitableobject import VisitableTree
 
-app = Typer()
+app = Typer(help="Efficient Repository Mining in Python.")
 
 
 class Sort(str, Enum):
@@ -84,6 +84,7 @@ def commits(
     sort: Optional[Sort] = Option(None, case_sensitive=False),
     sort_reverse: bool = False,
 ) -> None:
+    """Get the commit ids of a repository."""
     repo = Repository(repository)
     sorting = GIT_SORT_NONE
     if sort == "topological":
@@ -114,6 +115,7 @@ def analyze(
     metrics: Optional[List[str]] = Argument(None),
     commits: Optional[FileText] = None,
 ) -> None:
+    """Analyze commits of a repository."""
     tree_m, blob_m, unit_m = validate_metrics(metrics)
     for commit in validate_commits(
         Repository(repository),
@@ -163,18 +165,18 @@ def clone(
 ) -> None:
     "Clone a repository to a path."
     clone_repository(url, path, bare=True)
-    echo(f"Cloned {url} to {path}")
 
 
 @app.command()
 def branch(path: Path, local: bool = True, remote: bool = True) -> None:
+    """Get the branches of a repository."""
     repo = Repository(path)
     branches: Iterable[str] = tuple()
     if local and remote:
         branches = repo.branches
-    elif local and not remote:
+    elif local:
         branches = repo.branches.local
-    elif not local and remote:
+    elif remote:
         branches = repo.branches.remote
     for branch_name in branches:
         echo(branch_name)
