@@ -26,7 +26,7 @@ app = Typer(help="Efficient Repository Mining in Python.")
 
 AvailableMetrics = Enum(  # type: ignore
     "AvailableMetrics",
-    {key: key for key in {*TreeMetrics, *BlobMetrics, *UnitMetrics}},
+    sorted((key, key) for key in {*TreeMetrics, *BlobMetrics, *UnitMetrics}),
 )
 
 
