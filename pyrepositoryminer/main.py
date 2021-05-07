@@ -24,6 +24,11 @@ from .visitableobject import VisitableTree
 
 app = Typer(help="Efficient Repository Mining in Python.")
 
+AvailableMetrics = Enum(  # type: ignore
+    "AvailableMetrics",
+    {key: key for key in {*TreeMetrics, *BlobMetrics, *UnitMetrics}},
+)
+
 
 class Sort(str, Enum):
     topological = "topological"
@@ -39,15 +44,15 @@ blobshelper = DefaultDict[str, blobhelper]
 
 
 def validate_metrics(
-    metrics: Optional[Iterable[str]],
+    metrics: Optional[List[AvailableMetrics]],
 ) -> Tuple[Set[str], Set[str], Set[str]]:
     if metrics is None:
         return (set(), set(), set())
-    distinct = set(metrics)
+    distinct = {metric.value for metric in metrics}
     return (
-        distinct.intersection(TreeMetrics.keys()),
-        distinct.intersection(BlobMetrics.keys()),
-        distinct.intersection(UnitMetrics.keys()),
+        distinct & TreeMetrics.keys(),
+        distinct & BlobMetrics.keys(),
+        distinct & UnitMetrics.keys(),
     )
 
 
@@ -58,9 +63,11 @@ def validate_commits(
         try:
             obj = repository.get(commit_id)
         except ValueError:
-            pass
-        if obj is not None and isinstance(obj, Commit):
-            yield obj
+            continue
+        else:
+            if obj is None or not isinstance(obj, Commit):
+                continue
+        yield obj
 
 
 def walk_commits(
@@ -112,7 +119,7 @@ def commits(
 @app.command()
 def analyze(
     repository: Path,
-    metrics: Optional[List[str]] = Argument(None),
+    metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
     commits: Optional[FileText] = None,
 ) -> None:
     """Analyze commits of a repository."""
