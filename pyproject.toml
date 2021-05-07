@@ -7,7 +7,7 @@ authors = ["Fabian Heseding <39628987+fabianhe@users.noreply.github.com>"]
 readme = "README.md"
 homepage = "https://github.com/fabianhe/pyrepositoryminer"
 repository = "https://github.com/fabianhe/pyrepositoryminer"
-documentation = "https://github.com/fabianhe/pyrepositoryminer"
+documentation = "https://github.com/fabianhe/pyrepositoryminer/blob/master/DOCS.md"
 
 [tool.poetry.scripts]
 pyrepositoryminer = "pyrepositoryminer.main:app"
