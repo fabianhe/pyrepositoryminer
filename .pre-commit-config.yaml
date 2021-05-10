@@ -25,3 +25,11 @@ repos:
     rev: v0.812
     hooks:
       - id: mypy
+  - repo: local
+    hooks:
+      - id: typerdocs
+        name: Make typer docs
+        language: system
+        pass_filenames: false
+        always_run: true
+        entry: poetry run typer pyrepositoryminer.main utils docs --name pyrepositoryminer --output DOCS.md
