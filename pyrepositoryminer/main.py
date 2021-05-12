@@ -1,9 +1,9 @@
-from collections import defaultdict
 from enum import Enum
 from itertools import chain
+from multiprocessing import Pool
 from pathlib import Path
 from sys import stdin
-from typing import DefaultDict, Iterable, List, Optional, Set, Tuple, TypedDict
+from typing import Iterable, List, Optional, Set, Tuple
 
 from pygit2 import (
     GIT_SORT_NONE,
@@ -17,10 +17,10 @@ from pygit2 import (
 )
 from typer import Argument, FileText, Option, Typer, echo
 
+from pyrepositoryminer.analyze import analyze as analyze_worker
+from pyrepositoryminer.analyze import initialize as initialize_worker
+from pyrepositoryminer.helper import format_output
 from pyrepositoryminer.metrics import BlobMetrics, TreeMetrics, UnitMetrics
-
-from .helper import BlobOutput, Metric, UnitOutput, format_output, parse_commit
-from .visitableobject import VisitableTree
 
 app = Typer(help="Efficient Repository Mining in Python.")
 
@@ -35,14 +35,6 @@ class Sort(str, Enum):
     time = "time"
 
 
-class blobhelper(TypedDict):
-    metrics: List[Metric]
-    units: DefaultDict[str, List[Metric]]
-
-
-blobshelper = DefaultDict[str, blobhelper]
-
-
 def validate_metrics(
     metrics: Optional[List[AvailableMetrics]],
 ) -> Tuple[Set[str], Set[str], Set[str]]:
@@ -54,20 +46,6 @@ def validate_metrics(
         distinct & BlobMetrics.keys(),
         distinct & UnitMetrics.keys(),
     )
-
-
-def validate_commits(
-    repository: Repository, commit_ids: Iterable[str]
-) -> Iterable[Commit]:
-    for commit_id in commit_ids:
-        try:
-            obj = repository.get(commit_id)
-        except ValueError:
-            continue
-        else:
-            if obj is None or not isinstance(obj, Commit):
-                continue
-        yield obj
 
 
 def walk_commits(
@@ -84,8 +62,10 @@ def walk_commits(
 
 @app.command()
 def commits(
-    repository: Path,
-    branches: Optional[FileText] = None,
+    repository: Path = Argument(..., help="The path to the repository."),
+    branches: Optional[FileText] = Option(
+        None, help="The branches to pull the commits from."
+    ),
     simplify_first_parent: bool = True,
     drop_duplicates: bool = False,
     sort: Optional[Sort] = Option(None, case_sensitive=False),
@@ -121,48 +101,24 @@ def analyze(
     repository: Path,
     metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
     commits: Optional[FileText] = None,
+    workers: int = 1,
 ) -> None:
     """Analyze commits of a repository."""
+    workers = max(workers, 1)
     tree_m, blob_m, unit_m = validate_metrics(metrics)
-    for commit in validate_commits(
-        Repository(repository),
-        (commit_id.strip() for commit_id in (stdin if commits is None else commits)),
-    ):
-        blobs: blobshelper = defaultdict(
-            lambda: {"metrics": [], "units": defaultdict(list)}
-        )
-        for m in unit_m:
-            for res in UnitMetrics[m]().visitTree(VisitableTree(commit.tree)).result:
-                blobs[res.blob_id]["units"][res.unit_id].append(
-                    Metric(name=m, value=res.value)
-                )
-        for m in blob_m:
-            for res in BlobMetrics[m]().visitTree(VisitableTree(commit.tree)).result:
-                blobs[res.blob_id]["metrics"].append(Metric(name=m, value=res.value))
-        d = parse_commit(
-            commit,
-            metrics=[
-                Metric(
-                    name=m,
-                    value=TreeMetrics[m]()
-                    .visitTree(VisitableTree(commit.tree))
-                    .result.value,
-                )
-                for m in tree_m
-            ],
-            blobs=[
-                BlobOutput(
-                    id=str(blob_id),
-                    metrics=blob["metrics"],
-                    units=[
-                        UnitOutput(id=unit_id, metrics=unit)
-                        for unit_id, unit in blob["units"].items()
-                    ],
-                )
-                for blob_id, blob in blobs.items()
-            ],
-        )
-        echo(format_output(d))
+
+    with Pool(
+        max(workers, 1), initialize_worker, (repository, tree_m, blob_m, unit_m)
+    ) as pool:
+        for result in pool.imap(
+            analyze_worker,
+            (
+                commit_id.strip()
+                for commit_id in (stdin if commits is None else commits)
+            ),
+        ):
+            if result is not None:
+                echo(format_output(result))
 
 
 @app.command()
