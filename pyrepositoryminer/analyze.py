@@ -1,8 +1,7 @@
-from collections import defaultdict
 from pathlib import Path
-from typing import DefaultDict, Iterable, List, Optional, Tuple, TypedDict
+from typing import Dict, Iterable, List, Optional, Tuple, TypedDict
 
-from pygit2 import Commit, Repository
+from pygit2 import Commit, Repository, Tree
 
 from pyrepositoryminer.helper import (
     BlobOutput,
@@ -21,12 +20,9 @@ bm: Tuple[str, ...]
 um: Tuple[str, ...]
 
 
-class blobhelper(TypedDict):
-    metrics: List[Metric]
-    units: DefaultDict[str, List[Metric]]
-
-
-blobshelper = DefaultDict[str, blobhelper]
+BlobEntry = TypedDict(
+    "BlobEntry", {"metrics": List[Metric], "units": Dict[str, List[Metric]]}
+)
 
 
 def validate_commit(repository: Repository, commit_id: str) -> bool:
@@ -54,6 +50,29 @@ def initialize(
     um = tuple(sorted(unit_m))
 
 
+def analyze_unit(tree: Tree) -> Iterable[Tuple[str, str, Metric]]:
+    global um
+    for m in um:
+        for res in UnitMetrics[m]().visitTree(VisitableTree(tree)).result:
+            yield str(res.blob_id), str(res.unit_id), Metric(name=m, value=res.value)
+
+
+def analyze_blob(tree: Tree) -> Iterable[Tuple[str, Metric]]:
+    global bm
+    for m in bm:
+        for res in BlobMetrics[m]().visitTree(VisitableTree(tree)).result:
+            yield str(res.blob_id), Metric(name=m, value=res.value)
+
+
+def analyze_tree(tree: Tree) -> Iterable[Metric]:
+    global tm
+    for m in tm:
+        yield Metric(
+            name=m,
+            value=TreeMetrics[m]().visitTree(VisitableTree(tree)).result.value,
+        )
+
+
 def analyze(commit_id: str) -> Optional[CommitOutput]:
     global repo
     try:
@@ -64,34 +83,16 @@ def analyze(commit_id: str) -> Optional[CommitOutput]:
         if commit is None or not isinstance(commit, Commit):
             return None
 
-    blobs: blobshelper = defaultdict(
-        lambda: {"metrics": [], "units": defaultdict(list)}
-    )
-
-    global um
-    for m in um:
-        for res in UnitMetrics[m]().visitTree(VisitableTree(commit.tree)).result:
-            blobs[res.blob_id]["units"][res.unit_id].append(
-                Metric(name=m, value=res.value)
-            )
-
-    global bm
-    for m in bm:
-        for res in BlobMetrics[m]().visitTree(VisitableTree(commit.tree)).result:
-            blobs[res.blob_id]["metrics"].append(Metric(name=m, value=res.value))
-
-    global tm
+    d: Dict[str, BlobEntry] = {}
+    for blob_id, unit_id, metric in analyze_unit(commit.tree):
+        d.setdefault(blob_id, {"metrics": [], "units": {}})["units"].setdefault(
+            unit_id, []
+        ).append(metric)
+    for blob_id, metric in analyze_blob(commit.tree):
+        d.setdefault(blob_id, {"metrics": [], "units": {}})["metrics"].append(metric)
     return parse_commit(
         commit,
-        metrics=[
-            Metric(
-                name=m,
-                value=TreeMetrics[m]()
-                .visitTree(VisitableTree(commit.tree))
-                .result.value,
-            )
-            for m in tm
-        ],
+        metrics=analyze_tree(commit.tree),
         blobs=[
             BlobOutput(
                 id=str(blob_id),
@@ -101,6 +102,6 @@ def analyze(commit_id: str) -> Optional[CommitOutput]:
                     for unit_id, unit in blob["units"].items()
                 ],
             )
-            for blob_id, blob in blobs.items()
+            for blob_id, blob in d.items()
         ],
     )
