@@ -1,3 +1,7 @@
+"""Analyze a commit w.r.t tree-, blob- or unit-metrics.
+
+Global variables are accessed in the context of a worker.
+"""
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple, TypedDict
 
@@ -11,6 +15,7 @@ repo: Repository
 tm: Tuple[str, ...]
 bm: Tuple[str, ...]
 um: Tuple[str, ...]
+cached_oids: Dict[str, bool]
 
 
 class Metric(TypedDict):
@@ -99,39 +104,40 @@ def initialize(
     tree_m: Iterable[str],
     blob_m: Iterable[str],
     unit_m: Iterable[str],
+    cache: Dict[str, bool],
 ) -> None:
-    global repo
+    global repo, tm, bm, um, cached_oids
     repo = Repository(repository)
-    global tm
     tm = tuple(sorted(tree_m))
-    global bm
     bm = tuple(sorted(blob_m))
-    global um
     um = tuple(sorted(unit_m))
+    cached_oids = cache
 
 
 def analyze_unit(tree: Tree) -> Iterable[Tuple[str, str, str, Metric]]:
-    global um
+    global um, cached_oids
     for m in um:
-        for res in UnitMetrics[m]().visitTree(VisitableTree(tree)).result:
+        for res in UnitMetrics[m](cached_oids).visitTree(VisitableTree(tree)).result:
             yield str(res.blob_id), str(res.blob_name), str(res.unit_id), Metric(
                 name=m, value=res.value
             )
 
 
 def analyze_blob(tree: Tree) -> Iterable[Tuple[str, str, Metric]]:
-    global bm
+    global bm, cached_oids
     for m in bm:
-        for res in BlobMetrics[m]().visitTree(VisitableTree(tree)).result:
+        for res in BlobMetrics[m](cached_oids).visitTree(VisitableTree(tree)).result:
             yield str(res.blob_id), str(res.blob_name), Metric(name=m, value=res.value)
 
 
 def analyze_tree(tree: Tree) -> Iterable[Metric]:
-    global tm
+    global tm, cached_oids
     for m in tm:
         yield Metric(
             name=m,
-            value=TreeMetrics[m]().visitTree(VisitableTree(tree)).result.value,
+            value=TreeMetrics[m](cached_oids)
+            .visitTree(VisitableTree(tree))
+            .result.value,
         )
 
 

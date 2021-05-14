@@ -1,10 +1,10 @@
 from enum import Enum
 from itertools import chain
 from json import dumps
-from multiprocessing import Pool
+from multiprocessing import Manager, Pool
 from pathlib import Path
 from sys import stdin
-from typing import Iterable, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from pygit2 import (
     GIT_SORT_NONE,
@@ -107,8 +107,10 @@ def analyze(
     workers = max(workers, 1)
     tree_m, blob_m, unit_m = validate_metrics(metrics)
 
+    manager = Manager()
+    cache: Dict[str, bool] = manager.dict()
     with Pool(
-        max(workers, 1), initialize_worker, (repository, tree_m, blob_m, unit_m)
+        max(workers, 1), initialize_worker, (repository, tree_m, blob_m, unit_m, cache)
     ) as pool:
         for result in pool.imap(
             analyze_worker,

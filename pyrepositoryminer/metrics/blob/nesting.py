@@ -14,7 +14,7 @@ from ast import (
     parse,
     withitem,
 )
-from typing import Iterable, List
+from typing import Dict, Iterable, List
 
 from pyrepositoryminer.metrics.blob import BlobMetric, BlobMetricOutput
 from pyrepositoryminer.visitableobject import VisitableBlob
@@ -69,8 +69,8 @@ class NestingASTVisitor(NodeVisitor):
 
 
 class Nesting(BlobMetric):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, cache: Dict[str, bool]) -> None:
+        super().__init__(cache)
         self.metrics: List[BlobMetricOutput] = []
 
     def visitBlob(self, blob: VisitableBlob) -> Nesting:

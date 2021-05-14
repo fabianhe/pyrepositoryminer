@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, FrozenSet, Iterable, List
+from typing import Any, Dict, List
 
-from pygit2 import Blob, Oid, Tree
+from pygit2 import Blob, Tree
 
 from pyrepositoryminer.visitableobject import VisitableBlob, VisitableTree
 
 
 class TreeVisitor(ABC):
-    def __init__(self, previous_ids: Iterable[Oid] = []) -> None:
-        self.previous_ids: FrozenSet[Oid] = frozenset(previous_ids)
+    def __init__(self, cache: Dict[str, bool]) -> None:
+        self.cached_oids = cache
         self.path: List[str] = []
 
     @property
@@ -22,11 +22,13 @@ class TreeVisitor(ABC):
         pass
 
     def visitTree(self, tree: VisitableTree) -> TreeVisitor:
-        unseen = (obj for obj in tree.obj if obj.id not in self.previous_ids)
-        for obj in unseen:
+        for obj in tree.obj:
+            id = str(obj.id)
             if isinstance(obj, Tree):
                 self.path.append(f"{obj.name}/")
+                self.cached_oids.setdefault(id, False)
                 VisitableTree(obj).accept(self)
+                self.cached_oids[id] = True
             elif isinstance(obj, Blob):
                 self.path.append(str(obj.name))
                 VisitableBlob(obj).accept(self)
