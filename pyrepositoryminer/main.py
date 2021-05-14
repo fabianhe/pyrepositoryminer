@@ -1,5 +1,6 @@
 from enum import Enum
 from itertools import chain
+from json import dumps
 from multiprocessing import Pool
 from pathlib import Path
 from sys import stdin
@@ -19,7 +20,6 @@ from typer import Argument, FileText, Option, Typer, echo
 
 from pyrepositoryminer.analyze import analyze as analyze_worker
 from pyrepositoryminer.analyze import initialize as initialize_worker
-from pyrepositoryminer.helper import format_output
 from pyrepositoryminer.metrics import BlobMetrics, TreeMetrics, UnitMetrics
 
 app = Typer(help="Efficient Repository Mining in Python.")
@@ -118,7 +118,7 @@ def analyze(
             ),
         ):
             if result is not None:
-                echo(format_output(result))
+                echo(dumps(result, separators=(",", ":"), indent=None))
 
 
 @app.command()

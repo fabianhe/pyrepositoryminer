@@ -20,6 +20,7 @@ class Halstead(BlobMetric):
                 BlobMetricOutput(
                     value=data.total._asdict(),
                     blob_id=blob.obj.id,
+                    blob_name=self.pathname,
                 )
             )
 

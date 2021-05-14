@@ -16,7 +16,12 @@ class Linelength(UnitMetric):
             return self
         for i, line in enumerate(blob.obj.data.split(b"\n")):
             self.metrics.append(
-                UnitMetricOutput(len(line), blob_id=blob.obj.id, unit_id=f"L{i+1}")
+                UnitMetricOutput(
+                    len(line),
+                    blob_id=blob.obj.id,
+                    unit_id=f"L{i+1}",
+                    blob_name=self.pathname,
+                )
             )
         return self
 

@@ -21,6 +21,7 @@ class Complexity(UnitMetric):
                         unit_id=str(u.fullname),
                         value=int(u.complexity),
                         blob_id=blob.obj.id,
+                        blob_name=self.pathname,
                     )
                     for u in complexities
                 )

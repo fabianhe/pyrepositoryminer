@@ -80,6 +80,7 @@ class Nesting(BlobMetric):
                 BlobMetricOutput(
                     value=NestingASTVisitor().visit(m).result,
                     blob_id=blob.obj.id,
+                    blob_name=self.pathname,
                 )
             )
         return self

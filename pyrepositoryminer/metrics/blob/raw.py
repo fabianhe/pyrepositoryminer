@@ -20,6 +20,7 @@ class Raw(BlobMetric):
                 BlobMetricOutput(
                     value=data._asdict(),
                     blob_id=blob.obj.id,
+                    blob_name=self.pathname,
                 )
             )
 

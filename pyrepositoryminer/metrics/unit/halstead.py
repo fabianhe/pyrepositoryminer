@@ -20,6 +20,7 @@ class Halstead(UnitMetric):
                     unit_id=str(function_name),
                     value=report._asdict(),
                     blob_id=blob.obj.id,
+                    blob_name=self.pathname,
                 )
                 for function_name, report in h_visit(blob.obj.data).functions
             )

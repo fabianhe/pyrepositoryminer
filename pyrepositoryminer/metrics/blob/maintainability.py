@@ -19,6 +19,7 @@ class Maintainability(BlobMetric):
                 BlobMetricOutput(
                     value=mi_visit(blob.obj.data.decode(), multi=True),
                     blob_id=blob.obj.id,
+                    blob_name=self.pathname,
                 )
             )
 
