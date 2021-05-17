@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from pygit2 import Blob, Object, Tree
 
 if TYPE_CHECKING:
-    from .treevisitor import TreeVisitor
+    from pyrepositoryminer.metrics.visitor import TreeVisitor
 
 
 class VisitableObject(ABC):

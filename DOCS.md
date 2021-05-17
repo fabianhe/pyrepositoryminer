@@ -39,6 +39,7 @@ $ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[complexity|filecount
 **Options**:
 
 * `--commits FILENAME`
+* `--workers INTEGER`: [default: 1]
 * `--help`: Show this message and exit.
 
 ## `pyrepositoryminer branch`
@@ -92,11 +93,11 @@ $ pyrepositoryminer commits [OPTIONS] REPOSITORY
 
 **Arguments**:
 
-* `REPOSITORY`: [required]
+* `REPOSITORY`: The path to the repository.  [required]
 
 **Options**:
 
-* `--branches FILENAME`
+* `--branches FILENAME`: The branches to pull the commits from.
 * `--simplify-first-parent / --no-simplify-first-parent`: [default: True]
 * `--drop-duplicates / --no-drop-duplicates`: [default: False]
 * `--sort [topological|time]`

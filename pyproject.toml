@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyrepositoryminer"
-version = "0.2.0"
+version = "0.3.0"
 description = "Efficient Repository Mining in Python"
 license = "GPL-3.0-or-later"
 authors = ["Fabian Heseding <39628987+fabianhe@users.noreply.github.com>"]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, List
+from typing import Dict, Iterable, List
 
 from radon.metrics import h_visit
 
@@ -9,8 +9,8 @@ from pyrepositoryminer.visitableobject import VisitableBlob
 
 
 class Halstead(UnitMetric):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, cache: Dict[str, bool]) -> None:
+        super().__init__(cache)
         self.metrics: List[UnitMetricOutput] = []
 
     def visitBlob(self, blob: VisitableBlob) -> Halstead:
@@ -20,6 +20,7 @@ class Halstead(UnitMetric):
                     unit_id=str(function_name),
                     value=report._asdict(),
                     blob_id=blob.obj.id,
+                    blob_name=self.pathname,
                 )
                 for function_name, report in h_visit(blob.obj.data).functions
             )
