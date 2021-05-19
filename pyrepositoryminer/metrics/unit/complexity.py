@@ -1,33 +1,18 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable, List
+from typing import Iterable, Tuple
 
 from radon.complexity import cc_visit
 
-from pyrepositoryminer.metrics.unit import UnitMetric, UnitMetricOutput
+from pyrepositoryminer.metrics.unit import UnitMetric
 from pyrepositoryminer.visitableobject import VisitableBlob
 
 
 class Complexity(UnitMetric):
-    def __init__(self, cache: Dict[str, bool]) -> None:
-        super().__init__(cache)
-        self.metrics: List[UnitMetricOutput] = []
+    def is_filtered(self, blob: VisitableBlob) -> bool:
+        return not str(blob.obj.name).endswith(".py")
 
-    def visitBlob(self, blob: VisitableBlob) -> Complexity:
-        if blob.obj.name.endswith(".py"):
-            if complexities := cc_visit(blob.obj.data):
-                self.metrics.extend(
-                    UnitMetricOutput(
-                        unit_id=str(u.fullname),
-                        value=int(u.complexity),
-                        blob_id=blob.obj.id,
-                        blob_name=self.pathname,
-                    )
-                    for u in complexities
-                )
-
-        return self
-
-    @property
-    def result(self) -> Iterable[UnitMetricOutput]:
-        return self.metrics
+    def analyze_unit_values(self, blob: VisitableBlob) -> Iterable[Tuple[str, int]]:
+        complexities = cc_visit(blob.obj.data)
+        for u in complexities:
+            yield str(u.fullname), int(u.complexity)

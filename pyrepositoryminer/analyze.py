@@ -18,9 +18,13 @@ um: Tuple[str, ...]
 cached_oids: Dict[str, bool]
 
 
-class Metric(TypedDict):
+class MetricBase(TypedDict):
     name: str
+
+
+class Metric(MetricBase, total=False):
     value: Any
+    cached: bool
 
 
 class ObjectOutput(TypedDict):
@@ -118,27 +122,38 @@ def analyze_unit(tree: Tree) -> Iterable[Tuple[str, str, str, Metric]]:
     global um, cached_oids
     for m in um:
         for res in UnitMetrics[m](cached_oids).visitTree(VisitableTree(tree)).result:
-            yield str(res.blob_id), str(res.blob_name), str(res.unit_id), Metric(
-                name=m, value=res.value
-            )
+            metric = Metric(name=m)
+            if res.get("cached", False):
+                metric["cached"] = True
+            else:
+                metric["value"] = res["value"]
+            yield str(res["blob_id"]), str(res["blob_name"]), str(
+                res["unit_id"]
+            ), metric
 
 
 def analyze_blob(tree: Tree) -> Iterable[Tuple[str, str, Metric]]:
     global bm, cached_oids
     for m in bm:
         for res in BlobMetrics[m](cached_oids).visitTree(VisitableTree(tree)).result:
-            yield str(res.blob_id), str(res.blob_name), Metric(name=m, value=res.value)
+            metric = Metric(name=m)
+            if res.get("cached", False):
+                metric["cached"] = True
+            else:
+                metric["value"] = res["value"]
+            yield str(res["blob_id"]), str(res["blob_name"]), metric
 
 
 def analyze_tree(tree: Tree) -> Iterable[Metric]:
     global tm, cached_oids
     for m in tm:
-        yield Metric(
-            name=m,
-            value=TreeMetrics[m](cached_oids)
-            .visitTree(VisitableTree(tree))
-            .result.value,
-        )
+        res = TreeMetrics[m](cached_oids).visitTree(VisitableTree(tree)).result
+        metric = Metric(name=m)
+        if res.get("cached", False):
+            metric["cached"] = True
+        else:
+            metric["value"] = res["value"]
+        yield metric
 
 
 def analyze(commit_id: str) -> Optional[CommitOutput]:

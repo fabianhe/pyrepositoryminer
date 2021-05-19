@@ -1,30 +1,14 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable, List
-
 from radon.metrics import mi_visit
 
-from pyrepositoryminer.metrics.blob import BlobMetric, BlobMetricOutput
+from pyrepositoryminer.metrics.blob import BlobMetric
 from pyrepositoryminer.visitableobject import VisitableBlob
 
 
 class Maintainability(BlobMetric):
-    def __init__(self, cache: Dict[str, bool]) -> None:
-        super().__init__(cache)
-        self.metrics: List[BlobMetricOutput] = []
+    def is_filtered(self, blob: VisitableBlob) -> bool:
+        return not str(blob.obj.name).endswith(".py")
 
-    def visitBlob(self, blob: VisitableBlob) -> Maintainability:
-        if blob.obj.name.endswith(".py"):
-            self.metrics.append(
-                BlobMetricOutput(
-                    value=mi_visit(blob.obj.data.decode(), multi=True),
-                    blob_id=blob.obj.id,
-                    blob_name=self.pathname,
-                )
-            )
-
-        return self
-
-    @property
-    def result(self) -> Iterable[BlobMetricOutput]:
-        return self.metrics
+    def analyze_blob_value(self, blob: VisitableBlob) -> float:
+        return float(mi_visit(blob.obj.data.decode(), multi=True))
