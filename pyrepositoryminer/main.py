@@ -102,13 +102,18 @@ def analyze(
     metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
     commits: Optional[FileText] = None,
     workers: int = 1,
+    global_cache: bool = False,
 ) -> None:
     """Analyze commits of a repository."""
     workers = max(workers, 1)
     tree_m, blob_m, unit_m = validate_metrics(metrics)
 
-    manager = Manager()
-    cache: Dict[str, bool] = manager.dict()
+    cache: Dict[str, bool]
+    if global_cache:
+        manager = Manager()
+        cache = manager.dict()
+    else:
+        cache = {}
     with Pool(
         max(workers, 1), initialize_worker, (repository, tree_m, blob_m, unit_m, cache)
     ) as pool:
