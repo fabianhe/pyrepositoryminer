@@ -1,32 +1,19 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable, List
+from typing import Any, Dict, Iterable, Tuple
 
 from radon.metrics import h_visit
 
-from pyrepositoryminer.metrics.unit import UnitMetric, UnitMetricOutput
+from pyrepositoryminer.metrics.unit import UnitMetric
 from pyrepositoryminer.visitableobject import VisitableBlob
 
 
 class Halstead(UnitMetric):
-    def __init__(self, cache: Dict[str, bool]) -> None:
-        super().__init__(cache)
-        self.metrics: List[UnitMetricOutput] = []
+    def is_filtered(self, blob: VisitableBlob) -> bool:
+        return not str(blob.obj.name).endswith(".py")
 
-    def visitBlob(self, blob: VisitableBlob) -> Halstead:
-        if blob.obj.name.endswith(".py"):
-            self.metrics.extend(
-                UnitMetricOutput(
-                    unit_id=str(function_name),
-                    value=report._asdict(),
-                    blob_id=blob.obj.id,
-                    blob_name=self.pathname,
-                )
-                for function_name, report in h_visit(blob.obj.data).functions
-            )
-
-        return self
-
-    @property
-    def result(self) -> Iterable[UnitMetricOutput]:
-        return self.metrics
+    def analyze_unit_values(
+        self, blob: VisitableBlob
+    ) -> Iterable[Tuple[str, Dict[str, Any]]]:
+        for function_name, report in h_visit(blob.obj.data).functions:
+            yield function_name, report._asdict()

@@ -11,9 +11,11 @@ class Filecount(TreeMetric):
         super().__init__(cache)
         self.n: int = 0
 
-    def visitBlob(self, blob: VisitableBlob) -> Filecount:
+    def is_filtered(self, blob: VisitableBlob) -> bool:
+        return False
+
+    def analyze_blob(self, blob: VisitableBlob) -> None:
         self.n += 1
-        return self
 
     @property
     def result(self) -> TreeMetricOutput:

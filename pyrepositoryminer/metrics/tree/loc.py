@@ -11,9 +11,11 @@ class LOC(TreeMetric):
         super().__init__(cache)
         self.n: int = 0
 
-    def visitBlob(self, blob: VisitableBlob) -> LOC:
-        self.n += 0 if blob.obj.is_binary else len(blob.obj.data.split(b"\n"))
-        return self
+    def is_filtered(self, blob: VisitableBlob) -> bool:
+        return bool(blob.obj.is_binary)
+
+    def analyze_blob(self, blob: VisitableBlob) -> None:
+        self.n += len(blob.obj.data.split(b"\n"))
 
     @property
     def result(self) -> TreeMetricOutput:
