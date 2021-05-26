@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from radon.metrics import mi_visit
 
 from pyrepositoryminer.metrics.blob import BlobMetric

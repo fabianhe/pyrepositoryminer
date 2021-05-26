@@ -2,6 +2,7 @@ from typing import Dict, Type
 
 from pyrepositoryminer.metrics.blob import BlobMetric
 from pyrepositoryminer.metrics.blob.halstead import Halstead as HalsteadTotal
+from pyrepositoryminer.metrics.blob.linecount import Linecount
 from pyrepositoryminer.metrics.blob.maintainability import Maintainability
 from pyrepositoryminer.metrics.blob.nesting import Nesting
 from pyrepositoryminer.metrics.blob.raw import Raw
@@ -19,6 +20,7 @@ BlobMetrics: Dict[str, Type[BlobMetric]] = {
     "raw": Raw,
     "halstead_total": HalsteadTotal,
     "maintainability": Maintainability,
+    "linecount": Linecount,
 }
 UnitMetrics: Dict[str, Type[UnitMetric]] = {
     "complexity": Complexity,
