@@ -28,13 +28,13 @@ Analyze commits of a repository.
 **Usage**:
 
 ```console
-$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[complexity|filecount|halstead|halstead_total|linelength|loc|maintainability|nesting|raw]...
+$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[complexity|filecount|halstead|halstead_total|linecount|linelength|loc|maintainability|nesting|raw]...
 ```
 
 **Arguments**:
 
 * `REPOSITORY`: [required]
-* `[METRICS]:[complexity|filecount|halstead|halstead_total|linelength|loc|maintainability|nesting|raw]...`
+* `[METRICS]:[complexity|filecount|halstead|halstead_total|linecount|linelength|loc|maintainability|nesting|raw]...`
 
 **Options**:
 

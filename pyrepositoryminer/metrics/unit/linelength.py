@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Iterable, Tuple
 
 from pyrepositoryminer.metrics.unit import UnitMetric
