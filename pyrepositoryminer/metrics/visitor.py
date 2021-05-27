@@ -61,6 +61,8 @@ class TreeVisitor(ABC):
             elif isinstance(obj, Blob):
                 self.path.append(str(obj.name))
                 VisitableBlob(obj).accept(self)
+            else:
+                continue
             self.path.pop(-1)
         return self
 
