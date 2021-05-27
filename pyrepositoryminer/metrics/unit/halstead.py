@@ -13,5 +13,8 @@ class Halstead(UnitMetric):
     def analyze_unit_values(
         self, blob: VisitableBlob
     ) -> Iterable[Tuple[str, Dict[str, Any]]]:
-        for function_name, report in h_visit(blob.obj.data).functions:
-            yield function_name, report._asdict()
+        try:
+            for function_name, report in h_visit(blob.obj.data).functions:
+                yield function_name, report._asdict()
+        except SyntaxError:
+            pass  # TODO append an error output?
