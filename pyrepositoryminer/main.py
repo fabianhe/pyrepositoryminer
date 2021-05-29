@@ -1,10 +1,10 @@
 from enum import Enum
-from itertools import chain
+from itertools import filterfalse, islice
 from json import dumps
 from multiprocessing import Manager, Pool
 from pathlib import Path
 from sys import stdin
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, Hashable, Iterable, List, Optional, Set, Tuple, TypeVar
 
 from pygit2 import (
     GIT_SORT_NONE,
@@ -33,6 +33,16 @@ AvailableMetrics = Enum(  # type: ignore
 class Sort(str, Enum):
     topological = "topological"
     time = "time"
+
+
+T = TypeVar("T", bound=Hashable)
+
+
+def iter_distinct(iterable: Iterable[T]) -> Iterable[T]:
+    seen: Set[T] = set()
+    for element in filterfalse(seen.__contains__, iterable):
+        seen.add(element)
+        yield element
 
 
 def validate_metrics(
@@ -70,6 +80,7 @@ def commits(
     drop_duplicates: bool = False,
     sort: Optional[Sort] = Option(None, case_sensitive=False),
     sort_reverse: bool = False,
+    limit: Optional[int] = None,
 ) -> None:
     """Get the commit ids of a repository."""
     repo = Repository(repository)
@@ -89,11 +100,15 @@ def commits(
         if simplify_first_parent:
             walker.simplify_first_parent()
         walkers.append(walker)
-    all_commits: Iterable[Commit] = chain(*walkers)
+    commit_ids: Iterable[str] = (
+        str(commit.id) for walker in walkers for commit in walker
+    )
     if drop_duplicates:
-        all_commits = set(all_commits)
-    for commit in all_commits:
-        echo(str(commit.id))
+        commit_ids = iter_distinct(commit_ids)
+    if limit is not None:
+        commit_ids = islice(commit_ids, limit)
+    for commit_id in commit_ids:
+        echo(str(commit_id))
 
 
 @app.command()
