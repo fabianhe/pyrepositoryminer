@@ -1,10 +1,10 @@
 from enum import Enum
 from itertools import filterfalse, islice
-from json import dumps
+from json import dumps, loads
 from multiprocessing import Manager, Pool
 from pathlib import Path
 from sys import stdin
-from typing import Dict, Hashable, Iterable, List, Optional, Set, Tuple, TypeVar
+from typing import Any, Dict, Hashable, Iterable, List, Optional, Set, Tuple, TypeVar
 
 from pygit2 import (
     GIT_SORT_NONE,
@@ -18,6 +18,7 @@ from pygit2 import (
 )
 from typer import Argument, FileText, Option, Typer, echo
 
+from pyrepositoryminer.analyze import CommitOutput
 from pyrepositoryminer.analyze import analyze as analyze_worker
 from pyrepositoryminer.analyze import initialize as initialize_worker
 from pyrepositoryminer.metrics import BlobMetrics, TreeMetrics, UnitMetrics
@@ -165,3 +166,73 @@ def branch(path: Path, local: bool = True, remote: bool = True) -> None:
         branches = repo.branches.remote
     for branch_name in branches:
         echo(branch_name)
+
+
+@app.command()
+def to_csv() -> None:
+    """Format a JSONL input as CSV."""
+
+    results: Dict[str, List[Tuple[Any, ...]]] = {
+        "COMMITS": [],
+        "PARENTS": [],
+        "METRICS": [],
+        "BLOBS": [],
+        "BLOB_METRICS": [],
+        "UNITS": [],
+        "UNIT_METRICS": [],
+    }
+    for line in stdin:
+        d: CommitOutput = loads(line)
+        results["COMMITS"].append(
+            (
+                d["id"],
+                d["author"]["email"],
+                d["author"]["name"],
+                d["author"]["time"],
+                d["author"]["time_offset"],
+                d["commit_time"],
+                d["committer"]["email"],
+                d["committer"]["name"],
+                d["committer"]["time"],
+                d["committer"]["time_offset"],
+                d["message"],
+            )
+        )
+        for parent_id in d["parent_ids"]:
+            results["PARENTS"].append((d["id"], parent_id))
+        for metric in d["metrics"]:
+            results["METRICS"].append(
+                (
+                    d["id"],
+                    metric["name"],
+                    metric.get("value", None),
+                    metric.get("cached", False),
+                )
+            )
+        for blob in d["blobs"]:
+            results["BLOBS"].append((d["id"], blob["id"], blob["name"]))
+            for metric in blob["metrics"]:
+                results["BLOB_METRICS"].append(
+                    (
+                        blob["id"],
+                        metric["name"],
+                        metric.get("value", None),
+                        metric.get("cached", False),
+                    )
+                )
+            for unit in blob["units"]:
+                results["UNITS"].append((blob["id"], unit["id"]))
+                for metric in unit["metrics"]:
+                    results["UNIT_METRICS"].append(
+                        (
+                            blob["id"],
+                            unit["id"],
+                            metric["name"],
+                            metric.get("value", None),
+                            metric.get("cached", False),
+                        )
+                    )
+    for table_name, table in results.items():
+        echo(table_name)
+        for row in table:
+            echo(",".join(str(cell) for cell in row))
