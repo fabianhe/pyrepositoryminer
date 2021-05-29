@@ -1,28 +1,20 @@
 #!/usr/bin/env /bin/bash
 
-echo "How many commits are on all local branches?"
-pyrepositoryminer branch $1 --no-remote | pyrepositoryminer commits $1 | wc -l
+# Tests are run using [hyperfine](https://github.com/sharkdp/hyperfine).
+# If not explicitly mentioned, they are run on RAMDisk.
 
-echo "Iterate all commits, no metrics:"
-time (pyrepositoryminer branch $1 --no-remote | pyrepositoryminer commits $1 | pyrepositoryminer analyze $1 --workers 1 >> /dev/null)
+hyperfine --warmup 1 --runs 3 --export-json out1.json --parameter-list repo numpy.git,pandas.git,matplotlib.git,tensorflow.git 'pyrepositoryminer branch --no-remote {repo} | pyrepositoryminer commits {repo} | wc -l'
 
-echo "Iterate all commits, no metrics (4 workers):"
-time (pyrepositoryminer branch $1 --no-remote | pyrepositoryminer commits $1 | pyrepositoryminer analyze $1 --workers 4 >> /dev/null)
+hyperfine --warmup 1 --runs 3 --export-json out2.json --parameter-list repo numpy.git,pandas.git,matplotlib.git,tensorflow.git --parameter-list workers 1,4 'pyrepositoryminer branch --no-remote {repo} | pyrepositoryminer commits {repo} | pyrepositoryminer analyze {repo} --workers {workers}'
 
-echo "Filecount, 10000 commits:"
-time (pyrepositoryminer branch $1 --no-remote | pyrepositoryminer commits $1 | head -10000 | pyrepositoryminer analyze $1 filecount --workers 1 >> /dev/null)
+hyperfine --warmup 1 --runs 3 --export-json out3.json --parameter-list repo numpy.git,pandas.git,matplotlib.git,tensorflow.git --parameter-list workers 1,4 'pyrepositoryminer branch --no-remote {repo} | pyrepositoryminer commits --limit 1000 {repo} | pyrepositoryminer analyze {repo} filecount --workers {workers}'
 
-echo "Filecount, 10000 commits (4 workers):"
-time (pyrepositoryminer branch $1 --no-remote | pyrepositoryminer commits $1 | head -10000 | pyrepositoryminer analyze $1 filecount --workers 4 >> /dev/null)
+hyperfine --warmup 1 --runs 3 --export-json out4.json --parameter-list repo numpy.git,pandas.git,matplotlib.git,tensorflow.git --parameter-list workers 1,4 'pyrepositoryminer branch --no-remote {repo} | pyrepositoryminer commits --limit 100 {repo} | pyrepositoryminer analyze {repo} filecount --workers {workers} --global-cache'
 
-echo "Linecount, 25 commits:"
-time (pyrepositoryminer branch $1 --no-remote | pyrepositoryminer commits $1 | head -25 | pyrepositoryminer analyze $1 linecount --workers 1 >> /dev/null)
+# Run on disk, not RAMDisk
+hyperfine --warmup 1 --runs 3 --export-json ~/Repositories/pyrepositoryminer/measurements/out5.json --parameter-list repo numpy.git,pandas.git,matplotlib.git,tensorflow.git --parameter-list workers 1,4 'pyrepositoryminer branch --no-remote {repo} | pyrepositoryminer commits --limit 1000 {repo} | pyrepositoryminer analyze {repo} filecount --workers {workers}'
 
-echo "Linecount, 25 commits (4 workers):"
-time (pyrepositoryminer branch $1 --no-remote | pyrepositoryminer commits $1 | head -25 | pyrepositoryminer analyze $1 linecount --workers 4 >> /dev/null)
+hyperfine --warmup 1 --runs 3 --export-json out6.json --parameter-list repo numpy.git,pandas.git,matplotlib.git,tensorflow.git --parameter-list workers 1,4 'pyrepositoryminer branch --no-remote {repo} | pyrepositoryminer commits --limit 5 {repo} | pyrepositoryminer analyze {repo} linecount --workers {workers}'
 
-echo "Halstead, 1000 commits:"
-time (pyrepositoryminer branch $1 --no-remote | pyrepositoryminer commits $1 | head -1000 | pyrepositoryminer analyze $1 halstead --workers 1 >> /dev/null)
-
-echo "Halstead, 1000 commits (4 workers):"
-time (pyrepositoryminer branch $1 --no-remote | pyrepositoryminer commits $1 | head -1000 | pyrepositoryminer analyze $1 halstead --workers 4 >> /dev/null)
+# Run for each repo
+pyrepositoryminer branch --no-remote $1 | pyrepositoryminer commits --limit 5 $1 | pyrepositoryminer analyze $1 filecount linecount >> $1.jsonl
