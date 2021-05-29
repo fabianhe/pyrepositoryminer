@@ -103,4 +103,5 @@ $ pyrepositoryminer commits [OPTIONS] REPOSITORY
 * `--drop-duplicates / --no-drop-duplicates`: [default: False]
 * `--sort [topological|time]`
 * `--sort-reverse / --no-sort-reverse`: [default: False]
+* `--limit INTEGER`
 * `--help`: Show this message and exit.
