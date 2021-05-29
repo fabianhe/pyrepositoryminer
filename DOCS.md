@@ -20,6 +20,7 @@ $ pyrepositoryminer [OPTIONS] COMMAND [ARGS]...
 * `branch`: Get the branches of a repository.
 * `clone`: Clone a repository to a path.
 * `commits`: Get the commit ids of a repository.
+* `to-csv`: Format a JSONL input as CSV.
 
 ## `pyrepositoryminer analyze`
 
@@ -104,4 +105,18 @@ $ pyrepositoryminer commits [OPTIONS] REPOSITORY
 * `--sort [topological|time]`
 * `--sort-reverse / --no-sort-reverse`: [default: False]
 * `--limit INTEGER`
+* `--help`: Show this message and exit.
+
+## `pyrepositoryminer to-csv`
+
+Format a JSONL input as CSV.
+
+**Usage**:
+
+```console
+$ pyrepositoryminer to-csv [OPTIONS]
+```
+
+**Options**:
+
 * `--help`: Show this message and exit.
