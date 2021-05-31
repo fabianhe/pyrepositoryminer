@@ -92,24 +92,19 @@ def commits(
         sorting = GIT_SORT_TIME
     if sort_reverse:
         sorting |= GIT_SORT_REVERSE
-    walkers = []
-    for branch_name in (
-        branch_name.strip() for branch_name in (stdin if branches is None else branches)
-    ):
-        branch = repo.branches[branch_name]
-        walker: Walker = repo.walk(branch.peel().id)
-        if simplify_first_parent:
-            walker.simplify_first_parent()
-        walkers.append(walker)
+    walkers = [
+        repo.walk(repo.branches[branch_name.strip()].peel().id)
+        for branch_name in (stdin if branches is None else branches)
+    ]
+    if simplify_first_parent:
+        map(lambda walker: walker.simplify_first_parent(), walkers)  # type: ignore
     commit_ids: Iterable[str] = (
         str(commit.id) for walker in walkers for commit in walker
     )
-    if drop_duplicates:
-        commit_ids = iter_distinct(commit_ids)
-    if limit is not None:
-        commit_ids = islice(commit_ids, limit)
+    commit_ids = commit_ids if not drop_duplicates else iter_distinct(commit_ids)
+    commit_ids = commit_ids if limit is None else islice(commit_ids, limit)
     for commit_id in commit_ids:
-        echo(str(commit_id))
+        echo(commit_id)
 
 
 @app.command()
