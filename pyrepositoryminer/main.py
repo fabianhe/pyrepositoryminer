@@ -11,9 +11,7 @@ from pygit2 import (
     GIT_SORT_REVERSE,
     GIT_SORT_TIME,
     GIT_SORT_TOPOLOGICAL,
-    Commit,
     Repository,
-    Walker,
     clone_repository,
 )
 from typer import Argument, FileText, Option, Typer, echo
@@ -36,6 +34,13 @@ class Sort(str, Enum):
     time = "time"
 
 
+SORTINGS: Dict[Optional[str], int] = {
+    "topological": GIT_SORT_TOPOLOGICAL,
+    "time": GIT_SORT_TIME,
+    None: GIT_SORT_NONE,
+}
+
+
 T = TypeVar("T", bound=Hashable)
 
 
@@ -49,26 +54,12 @@ def iter_distinct(iterable: Iterable[T]) -> Iterable[T]:
 def validate_metrics(
     metrics: Optional[List[AvailableMetrics]],
 ) -> Tuple[Set[str], Set[str], Set[str]]:
-    if metrics is None:
-        return (set(), set(), set())
-    distinct = {metric.value for metric in metrics}
+    distinct = set() if metrics is None else {metric.value for metric in metrics}
     return (
         distinct & TreeMetrics.keys(),
         distinct & BlobMetrics.keys(),
         distinct & UnitMetrics.keys(),
     )
-
-
-def walk_commits(
-    repo: Repository, branch_name: str, simplify_first_parent: bool
-) -> Iterable[Commit]:
-    branch = repo.branches[branch_name]
-    walker: Walker = repo.walk(
-        branch.peel().id, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE
-    )
-    if simplify_first_parent:
-        walker.simplify_first_parent()
-    yield from walker
 
 
 @app.command()
@@ -85,15 +76,10 @@ def commits(
 ) -> None:
     """Get the commit ids of a repository."""
     repo = Repository(repository)
-    sorting = GIT_SORT_NONE
-    if sort == "topological":
-        sorting = GIT_SORT_TOPOLOGICAL
-    elif sort == "time":
-        sorting = GIT_SORT_TIME
-    if sort_reverse:
-        sorting |= GIT_SORT_REVERSE
+    sorting = SORTINGS[sort]
+    sorting = sorting if not sort_reverse else (sorting | GIT_SORT_REVERSE)
     walkers = [
-        repo.walk(repo.branches[branch_name.strip()].peel().id)
+        repo.walk(repo.branches[branch_name.strip()].peel().id, sorting)
         for branch_name in (stdin if branches is None else branches)
     ]
     if simplify_first_parent:
@@ -137,7 +123,7 @@ def clone(
 def branch(path: Path, local: bool = True, remote: bool = True) -> None:
     """Get the branches of a repository."""
     repo = Repository(path)
-    branches: Iterable[str] = tuple()
+    branches: Iterable[str]
     if local and remote:
         branches = repo.branches
     elif local:
