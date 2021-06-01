@@ -115,17 +115,11 @@ def analyze(
     workers: int = 1,
 ) -> None:
     """Analyze commits of a repository."""
+    ids = (id.strip() for id in (stdin if commits is None else commits))
     with Pool(
         max(workers, 1), initialize_worker, (repository, *validate_metrics(metrics), {})
     ) as pool:
-        results = (
-            async_result.get()
-            for async_result in tuple(
-                pool.apply_async(analyze_worker, [commit_id.strip()])
-                for commit_id in (stdin if commits is None else commits)
-            )
-        )
-        results = (result for result in results if result is not None)
+        results = (res for res in pool.imap(analyze_worker, ids) if res is not None)
         for result in results:
             echo(result)
 
