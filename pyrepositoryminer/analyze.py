@@ -2,6 +2,7 @@
 
 Global variables are accessed in the context of a worker.
 """
+from json import dumps
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple, TypedDict
 
@@ -156,7 +157,7 @@ def analyze_tree(tree: Tree) -> Iterable[Metric]:
         yield metric
 
 
-def analyze(commit_id: str) -> Optional[CommitOutput]:
+def analyze(commit_id: str) -> Optional[str]:
     global repo
     try:
         commit = repo.get(commit_id)
@@ -175,19 +176,23 @@ def analyze(commit_id: str) -> Optional[CommitOutput]:
         d.setdefault(blob_id, {"name": blob_name, "metrics": [], "units": {}})[
             "metrics"
         ].append(metric)
-    return parse_commit(
-        commit,
-        metrics=analyze_tree(commit.tree),
-        blobs=[
-            BlobOutput(
-                id=str(blob_id),
-                name=blob["name"],
-                metrics=blob["metrics"],
-                units=[
-                    UnitOutput(id=unit_id, metrics=unit)
-                    for unit_id, unit in blob["units"].items()
-                ],
-            )
-            for blob_id, blob in d.items()
-        ],
+    return dumps(
+        parse_commit(
+            commit,
+            metrics=analyze_tree(commit.tree),
+            blobs=[
+                BlobOutput(
+                    id=str(blob_id),
+                    name=blob["name"],
+                    metrics=blob["metrics"],
+                    units=[
+                        UnitOutput(id=unit_id, metrics=unit)
+                        for unit_id, unit in blob["units"].items()
+                    ],
+                )
+                for blob_id, blob in d.items()
+            ],
+        ),
+        separators=(",", ":"),
+        indent=None,
     )

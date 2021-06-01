@@ -1,7 +1,7 @@
 from enum import Enum
 from itertools import filterfalse, islice
-from json import dumps, loads
-from multiprocessing import Manager, Pool
+from json import loads
+from multiprocessing import Pool
 from pathlib import Path
 from sys import stdin
 from typing import Any, Dict, Hashable, Iterable, List, Optional, Set, Tuple, TypeVar
@@ -113,30 +113,21 @@ def analyze(
     metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
     commits: Optional[FileText] = None,
     workers: int = 1,
-    global_cache: bool = False,
 ) -> None:
     """Analyze commits of a repository."""
-    workers = max(workers, 1)
-    tree_m, blob_m, unit_m = validate_metrics(metrics)
-
-    cache: Dict[str, bool]
-    if global_cache:
-        manager = Manager()
-        cache = manager.dict()
-    else:
-        cache = {}
     with Pool(
-        max(workers, 1), initialize_worker, (repository, tree_m, blob_m, unit_m, cache)
+        max(workers, 1), initialize_worker, (repository, *validate_metrics(metrics), {})
     ) as pool:
-        for result in pool.imap(
-            analyze_worker,
-            (
-                commit_id.strip()
+        results = (
+            async_result.get()
+            for async_result in tuple(
+                pool.apply_async(analyze_worker, [commit_id.strip()])
                 for commit_id in (stdin if commits is None else commits)
-            ),
-        ):
-            if result is not None:
-                echo(dumps(result, separators=(",", ":"), indent=None))
+            )
+        )
+        results = (result for result in results if result is not None)
+        for result in results:
+            echo(result)
 
 
 @app.command()
