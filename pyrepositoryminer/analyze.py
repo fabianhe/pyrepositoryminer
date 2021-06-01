@@ -42,23 +42,18 @@ class BlobOutput(ObjectOutput):
     units: List[UnitOutput]
 
 
-class SignatureOutput(TypedDict):
-    email: str
-    name: str
-    time_offset: int
-    time: int
+SignatureOutput = TypedDict(
+    "SignatureOutput", {"email": str, "name": str, "time_offset": int, "time": int}
+)
 
 
-class CommitBase(ObjectOutput):
+class CommitOutput(ObjectOutput):
     author: SignatureOutput
     commit_time: int
     commit_time_offset: int
     committer: SignatureOutput
     message: str
     parent_ids: List[str]
-
-
-class CommitOutput(CommitBase, total=False):
     metrics: List[Metric]
     blobs: List[BlobOutput]
 
@@ -93,15 +88,6 @@ def parse_commit(
         metrics=list(metrics),
         blobs=list(blobs),
     )
-
-
-def validate_commit(repository: Repository, commit_id: str) -> bool:
-    try:
-        obj = repository.get(commit_id)
-    except ValueError:
-        return False
-    else:
-        return obj is not None and isinstance(obj, Commit)
 
 
 def initialize(
@@ -176,23 +162,20 @@ def analyze(commit_id: str) -> Optional[str]:
         d.setdefault(blob_id, {"name": blob_name, "metrics": [], "units": {}})[
             "metrics"
         ].append(metric)
-    return dumps(
-        parse_commit(
-            commit,
-            metrics=analyze_tree(commit.tree),
-            blobs=[
-                BlobOutput(
-                    id=str(blob_id),
-                    name=blob["name"],
-                    metrics=blob["metrics"],
-                    units=[
-                        UnitOutput(id=unit_id, metrics=unit)
-                        for unit_id, unit in blob["units"].items()
-                    ],
-                )
-                for blob_id, blob in d.items()
-            ],
-        ),
-        separators=(",", ":"),
-        indent=None,
+    output = parse_commit(
+        commit,
+        metrics=analyze_tree(commit.tree),
+        blobs=[
+            BlobOutput(
+                id=str(blob_id),
+                name=blob["name"],
+                metrics=blob["metrics"],
+                units=[
+                    UnitOutput(id=unit_id, metrics=unit)
+                    for unit_id, unit in blob["units"].items()
+                ],
+            )
+            for blob_id, blob in d.items()
+        ],
     )
+    return dumps(output, separators=(",", ":"), indent=None)
