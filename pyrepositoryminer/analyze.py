@@ -16,7 +16,7 @@ repo: Repository
 tm: Tuple[str, ...]
 bm: Tuple[str, ...]
 um: Tuple[str, ...]
-cached_oids: Dict[str, bool]
+cached_oids: Dict[str, bool] = {}
 
 
 class MetricBase(TypedDict):
@@ -95,14 +95,12 @@ def initialize(
     tree_m: Iterable[str],
     blob_m: Iterable[str],
     unit_m: Iterable[str],
-    cache: Dict[str, bool],
 ) -> None:
-    global repo, tm, bm, um, cached_oids
+    global repo, tm, bm, um
     repo = Repository(repository)
     tm = tuple(sorted(tree_m))
     bm = tuple(sorted(blob_m))
     um = tuple(sorted(unit_m))
-    cached_oids = cache
 
 
 def analyze_unit(tree: Tree) -> Iterable[Tuple[str, str, str, Metric]]:

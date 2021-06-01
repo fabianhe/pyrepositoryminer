@@ -12,6 +12,7 @@ from pygit2 import (
     GIT_SORT_TIME,
     GIT_SORT_TOPOLOGICAL,
     Repository,
+    Walker,
     clone_repository,
 )
 from typer import Argument, FileText, Option, Typer, echo
@@ -62,6 +63,21 @@ def validate_metrics(
     )
 
 
+def generate_walkers(
+    repo: Repository,
+    branch_names: Iterable[str],
+    simplify_first_parent: bool,
+    sorting: int,
+) -> Iterable[Walker]:
+    walkers = tuple(
+        repo.walk(repo.branches[branch_name.strip()].peel().id, sorting)
+        for branch_name in branch_names
+    )
+    for walker in walkers if simplify_first_parent else tuple():
+        walker.simplify_first_parent()
+    yield from walkers
+
+
 @app.command()
 def commits(
     repository: Path = Argument(..., help="The path to the repository."),
@@ -75,17 +91,15 @@ def commits(
     limit: Optional[int] = None,
 ) -> None:
     """Get the commit ids of a repository."""
-    repo = Repository(repository)
-    sorting = SORTINGS[sort]
-    sorting = sorting if not sort_reverse else (sorting | GIT_SORT_REVERSE)
-    walkers = [
-        repo.walk(repo.branches[branch_name.strip()].peel().id, sorting)
-        for branch_name in (stdin if branches is None else branches)
-    ]
-    if simplify_first_parent:
-        map(lambda walker: walker.simplify_first_parent(), walkers)  # type: ignore
     commit_ids: Iterable[str] = (
-        str(commit.id) for walker in walkers for commit in walker
+        str(commit.id)
+        for walker in generate_walkers(
+            Repository(repository),
+            stdin if branches is None else branches,
+            simplify_first_parent,
+            SORTINGS[sort] if not sort_reverse else (SORTINGS[sort] | GIT_SORT_REVERSE),
+        )
+        for commit in walker
     )
     commit_ids = commit_ids if not drop_duplicates else iter_distinct(commit_ids)
     commit_ids = commit_ids if limit is None else islice(commit_ids, limit)
@@ -103,7 +117,7 @@ def analyze(
     """Analyze commits of a repository."""
     ids = (id.strip() for id in (stdin if commits is None else commits))
     with Pool(
-        max(workers, 1), initialize_worker, (repository, *validate_metrics(metrics), {})
+        max(workers, 1), initialize_worker, (repository, *validate_metrics(metrics))
     ) as pool:
         results = (res for res in pool.imap(analyze_worker, ids) if res is not None)
         for result in results:
