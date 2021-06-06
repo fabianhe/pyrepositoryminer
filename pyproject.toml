@@ -17,6 +17,7 @@ python = "^3.9"
 pygit2 = "^1.5.0"
 typer = {extras = ["all"], version = "^0.3.2"}
 radon = "^4.5.0"
+uvloop = "^0.15.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
