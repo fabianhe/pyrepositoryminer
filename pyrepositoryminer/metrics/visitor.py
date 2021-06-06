@@ -41,10 +41,10 @@ class TreeVisitor(ABC):
 
     @final
     def visitBlob(self, blob: VisitableBlob) -> TreeVisitor:
-        if self.is_filtered(blob):
-            return self
-        elif self.is_cached(blob):
+        if self.is_cached(blob):
             self.handle_cache_hit(blob)
+            return self
+        elif self.is_filtered(blob):
             return self
         self.cache_blob(blob)
         self.analyze_blob(blob)

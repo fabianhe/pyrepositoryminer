@@ -92,15 +92,15 @@ def parse_commit(
 
 def initialize(
     repository: Path,
-    tree_m: Iterable[str],
-    blob_m: Iterable[str],
-    unit_m: Iterable[str],
+    tree_m: Tuple[str, ...],
+    blob_m: Tuple[str, ...],
+    unit_m: Tuple[str, ...],
 ) -> None:
     global repo, tm, bm, um
     repo = Repository(repository)
-    tm = tuple(sorted(tree_m))
-    bm = tuple(sorted(blob_m))
-    um = tuple(sorted(unit_m))
+    tm = tree_m
+    bm = blob_m
+    um = unit_m
 
 
 def analyze_unit(tree: Tree) -> Iterable[Tuple[str, str, str, Metric]]:

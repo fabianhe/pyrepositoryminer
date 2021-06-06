@@ -54,12 +54,14 @@ def iter_distinct(iterable: Iterable[T]) -> Iterable[T]:
 
 def validate_metrics(
     metrics: Optional[List[AvailableMetrics]],
-) -> Tuple[Set[str], Set[str], Set[str]]:
-    distinct = set() if metrics is None else {metric.value for metric in metrics}
+) -> Tuple[Tuple[str, ...], Tuple[str, ...], Tuple[str, ...]]:
+    distinct: Set[str] = (
+        set() if metrics is None else {metric.value for metric in metrics}
+    )
     return (
-        distinct & TreeMetrics.keys(),
-        distinct & BlobMetrics.keys(),
-        distinct & UnitMetrics.keys(),
+        tuple(sorted(distinct & TreeMetrics.keys())),
+        tuple(sorted(distinct & BlobMetrics.keys())),
+        tuple(sorted(distinct & UnitMetrics.keys())),
     )
 
 
