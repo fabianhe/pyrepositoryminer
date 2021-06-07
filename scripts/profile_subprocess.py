@@ -10,8 +10,8 @@ ITERATIONS = 2000
 
 
 async def run_async_wc() -> bytes:
-    p = await asyncio.create_subprocess_shell(
-        "wc -l", stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE
+    p = await asyncio.create_subprocess_exec(
+        "wc", "-l", stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE
     )
     stdout, stderr = await p.communicate(DATA)
     return stdout
