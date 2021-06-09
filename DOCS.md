@@ -20,7 +20,6 @@ $ pyrepositoryminer [OPTIONS] COMMAND [ARGS]...
 * `branch`: Get the branches of a repository.
 * `clone`: Clone a repository to a path.
 * `commits`: Get the commit ids of a repository.
-* `to-csv`: Format a JSONL input as CSV.
 
 ## `pyrepositoryminer analyze`
 
@@ -29,13 +28,13 @@ Analyze commits of a repository.
 **Usage**:
 
 ```console
-$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[complexity|filecount|halstead|halstead_total|linecount|linelength|loc|maintainability|nesting|raw]...
+$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[halstead]...
 ```
 
 **Arguments**:
 
 * `REPOSITORY`: [required]
-* `[METRICS]:[complexity|filecount|halstead|halstead_total|linecount|linelength|loc|maintainability|nesting|raw]...`
+* `[METRICS]:[halstead]...`
 
 **Options**:
 
@@ -104,18 +103,4 @@ $ pyrepositoryminer commits [OPTIONS] REPOSITORY
 * `--sort [topological|time]`
 * `--sort-reverse / --no-sort-reverse`: [default: False]
 * `--limit INTEGER`
-* `--help`: Show this message and exit.
-
-## `pyrepositoryminer to-csv`
-
-Format a JSONL input as CSV.
-
-**Usage**:
-
-```console
-$ pyrepositoryminer to-csv [OPTIONS]
-```
-
-**Options**:
-
 * `--help`: Show this message and exit.

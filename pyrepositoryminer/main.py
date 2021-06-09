@@ -1,10 +1,9 @@
 from enum import Enum
 from itertools import filterfalse, islice
-from json import loads
 from multiprocessing import Pool
 from pathlib import Path
 from sys import stdin
-from typing import Any, Dict, Hashable, Iterable, List, Optional, Set, Tuple, TypeVar
+from typing import Dict, Hashable, Iterable, List, Optional, Set, Tuple, TypeVar
 
 from pygit2 import (
     GIT_SORT_NONE,
@@ -17,16 +16,14 @@ from pygit2 import (
 )
 from typer import Argument, FileText, Option, Typer, echo
 
-from pyrepositoryminer.analyze import CommitOutput
-from pyrepositoryminer.analyze import analyze as analyze_worker
-from pyrepositoryminer.analyze import initialize as initialize_worker
-from pyrepositoryminer.metrics import BlobMetrics, TreeMetrics, UnitMetrics
+from pyrepositoryminer.analyze import InitArgs, initialize, worker
+from pyrepositoryminer.metrics import NativeBlobMetrics  # type: ignore
 
 app = Typer(help="Efficient Repository Mining in Python.")
 
 AvailableMetrics = Enum(  # type: ignore
     "AvailableMetrics",
-    sorted((key, key) for key in {*TreeMetrics, *BlobMetrics, *UnitMetrics}),
+    sorted((key, key) for key in {*NativeBlobMetrics}),
 )
 
 
@@ -54,15 +51,11 @@ def iter_distinct(iterable: Iterable[T]) -> Iterable[T]:
 
 def validate_metrics(
     metrics: Optional[List[AvailableMetrics]],
-) -> Tuple[Tuple[str, ...], Tuple[str, ...], Tuple[str, ...]]:
+) -> Tuple[Tuple[str, ...]]:
     distinct: Set[str] = (
         set() if metrics is None else {metric.value for metric in metrics}
     )
-    return (
-        tuple(sorted(distinct & TreeMetrics.keys())),
-        tuple(sorted(distinct & BlobMetrics.keys())),
-        tuple(sorted(distinct & UnitMetrics.keys())),
-    )
+    return (tuple(sorted(distinct & NativeBlobMetrics.keys())),)
 
 
 def generate_walkers(
@@ -118,10 +111,17 @@ def analyze(
 ) -> None:
     """Analyze commits of a repository."""
     ids = (id.strip() for id in (stdin if commits is None else commits))
+    native_blob_metrics = (
+        tuple()
+        if metrics is None
+        else tuple(sorted({m.value for m in metrics if m.value in NativeBlobMetrics}))
+    )
     with Pool(
-        max(workers, 1), initialize_worker, (repository, *validate_metrics(metrics))
+        max(workers, 1),
+        initialize,
+        tuple(InitArgs(repository, native_blob_metrics)),
     ) as pool:
-        results = (res for res in pool.imap(analyze_worker, ids) if res is not None)
+        results = (res for res in pool.imap(worker, ids) if res is not None)
         for result in results:
             echo(result)
 
@@ -148,73 +148,3 @@ def branch(path: Path, local: bool = True, remote: bool = True) -> None:
         branches = repo.branches.remote
     for branch_name in branches:
         echo(branch_name)
-
-
-@app.command()
-def to_csv() -> None:
-    """Format a JSONL input as CSV."""
-
-    results: Dict[str, List[Tuple[Any, ...]]] = {
-        "COMMITS": [],
-        "PARENTS": [],
-        "METRICS": [],
-        "BLOBS": [],
-        "BLOB_METRICS": [],
-        "UNITS": [],
-        "UNIT_METRICS": [],
-    }
-    for line in stdin:
-        d: CommitOutput = loads(line)
-        results["COMMITS"].append(
-            (
-                d["id"],
-                d["author"]["email"],
-                d["author"]["name"],
-                d["author"]["time"],
-                d["author"]["time_offset"],
-                d["commit_time"],
-                d["committer"]["email"],
-                d["committer"]["name"],
-                d["committer"]["time"],
-                d["committer"]["time_offset"],
-                d["message"],
-            )
-        )
-        for parent_id in d["parent_ids"]:
-            results["PARENTS"].append((d["id"], parent_id))
-        for metric in d["metrics"]:
-            results["METRICS"].append(
-                (
-                    d["id"],
-                    metric["name"],
-                    metric.get("value", None),
-                    metric.get("cached", False),
-                )
-            )
-        for blob in d["blobs"]:
-            results["BLOBS"].append((d["id"], blob["id"], blob["name"]))
-            for metric in blob["metrics"]:
-                results["BLOB_METRICS"].append(
-                    (
-                        blob["id"],
-                        metric["name"],
-                        metric.get("value", None),
-                        metric.get("cached", False),
-                    )
-                )
-            for unit in blob["units"]:
-                results["UNITS"].append((blob["id"], unit["id"]))
-                for metric in unit["metrics"]:
-                    results["UNIT_METRICS"].append(
-                        (
-                            blob["id"],
-                            unit["id"],
-                            metric["name"],
-                            metric.get("value", None),
-                            metric.get("cached", False),
-                        )
-                    )
-    for table_name, table in results.items():
-        echo(table_name)
-        for row in table:
-            echo(",".join(str(cell) for cell in row))

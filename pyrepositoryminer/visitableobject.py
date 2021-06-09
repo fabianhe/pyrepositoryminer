@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterator
 
 from pygit2 import Blob, Object, Tree
 
@@ -9,29 +8,50 @@ if TYPE_CHECKING:
     from pyrepositoryminer.metrics.visitor import TreeVisitor
 
 
-class VisitableObject(ABC):
-    @abstractmethod
+class VisitableObject:
+    @classmethod
+    def from_object(cls, obj: Object) -> VisitableObject:
+        if isinstance(obj, Tree):
+            return VisitableTree(obj)
+        elif isinstance(obj, Blob):
+            return VisitableBlob(obj)
+        return VisitableObject(obj)
+
     def __init__(self, obj: Object) -> None:
+        self.obj = obj
+
+    async def accept(self, treevisitor: "TreeVisitor") -> None:
         pass
 
-    @abstractmethod
-    def accept(self, treevisitor: "TreeVisitor") -> None:
-        pass
+    @property
+    def id(self) -> str:
+        return str(self.obj.id)
+
+    @property
+    def name(self) -> str:
+        return str(self.obj.name)
 
 
 class VisitableTree(VisitableObject):
-    def __init__(self, obj: Tree) -> None:
-        super().__init__(obj)
-        self.obj: Tree = obj
+    async def accept(self, treevisitor: "TreeVisitor") -> None:
+        await treevisitor.visitTree(self)
 
-    def accept(self, treevisitor: "TreeVisitor") -> None:
-        treevisitor.visitTree(self)
+    def __iter__(self) -> Iterator[VisitableObject]:
+        return (VisitableObject.from_object(obj) for obj in self.obj)
 
 
 class VisitableBlob(VisitableObject):
-    def __init__(self, obj: Blob) -> None:
-        super().__init__(obj)
-        self.obj: Blob = obj
+    async def accept(self, treevisitor: "TreeVisitor") -> None:
+        await treevisitor.visitBlob(self)
 
-    def accept(self, treevisitor: "TreeVisitor") -> None:
-        treevisitor.visitBlob(self)
+    @property
+    def is_binary(self) -> bool:
+        return bool(self.obj.is_binary)
+
+    @property
+    def data(self) -> bytes:
+        return bytes(self.obj.data)
+
+    @property
+    def size(self) -> int:
+        return int(self.obj.size)
