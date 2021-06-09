@@ -41,7 +41,6 @@ $ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[complexity|filecount
 
 * `--commits FILENAME`
 * `--workers INTEGER`: [default: 1]
-* `--global-cache / --no-global-cache`: [default: False]
 * `--help`: Show this message and exit.
 
 ## `pyrepositoryminer branch`

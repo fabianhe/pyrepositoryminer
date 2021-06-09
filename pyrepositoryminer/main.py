@@ -1,7 +1,7 @@
 from enum import Enum
 from itertools import filterfalse, islice
-from json import dumps, loads
-from multiprocessing import Manager, Pool
+from json import loads
+from multiprocessing import Pool
 from pathlib import Path
 from sys import stdin
 from typing import Any, Dict, Hashable, Iterable, List, Optional, Set, Tuple, TypeVar
@@ -11,7 +11,6 @@ from pygit2 import (
     GIT_SORT_REVERSE,
     GIT_SORT_TIME,
     GIT_SORT_TOPOLOGICAL,
-    Commit,
     Repository,
     Walker,
     clone_repository,
@@ -36,6 +35,13 @@ class Sort(str, Enum):
     time = "time"
 
 
+SORTINGS: Dict[Optional[str], int] = {
+    "topological": GIT_SORT_TOPOLOGICAL,
+    "time": GIT_SORT_TIME,
+    None: GIT_SORT_NONE,
+}
+
+
 T = TypeVar("T", bound=Hashable)
 
 
@@ -48,27 +54,30 @@ def iter_distinct(iterable: Iterable[T]) -> Iterable[T]:
 
 def validate_metrics(
     metrics: Optional[List[AvailableMetrics]],
-) -> Tuple[Set[str], Set[str], Set[str]]:
-    if metrics is None:
-        return (set(), set(), set())
-    distinct = {metric.value for metric in metrics}
+) -> Tuple[Tuple[str, ...], Tuple[str, ...], Tuple[str, ...]]:
+    distinct: Set[str] = (
+        set() if metrics is None else {metric.value for metric in metrics}
+    )
     return (
-        distinct & TreeMetrics.keys(),
-        distinct & BlobMetrics.keys(),
-        distinct & UnitMetrics.keys(),
+        tuple(sorted(distinct & TreeMetrics.keys())),
+        tuple(sorted(distinct & BlobMetrics.keys())),
+        tuple(sorted(distinct & UnitMetrics.keys())),
     )
 
 
-def walk_commits(
-    repo: Repository, branch_name: str, simplify_first_parent: bool
-) -> Iterable[Commit]:
-    branch = repo.branches[branch_name]
-    walker: Walker = repo.walk(
-        branch.peel().id, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE
+def generate_walkers(
+    repo: Repository,
+    branch_names: Iterable[str],
+    simplify_first_parent: bool,
+    sorting: int,
+) -> Iterable[Walker]:
+    walkers = tuple(
+        repo.walk(repo.branches[branch_name.strip()].peel().id, sorting)
+        for branch_name in branch_names
     )
-    if simplify_first_parent:
+    for walker in walkers if simplify_first_parent else tuple():
         walker.simplify_first_parent()
-    yield from walker
+    yield from walkers
 
 
 @app.command()
@@ -84,22 +93,15 @@ def commits(
     limit: Optional[int] = None,
 ) -> None:
     """Get the commit ids of a repository."""
-    repo = Repository(repository)
-    sorting = GIT_SORT_NONE
-    if sort == "topological":
-        sorting = GIT_SORT_TOPOLOGICAL
-    elif sort == "time":
-        sorting = GIT_SORT_TIME
-    if sort_reverse:
-        sorting |= GIT_SORT_REVERSE
-    walkers = [
-        repo.walk(repo.branches[branch_name.strip()].peel().id)
-        for branch_name in (stdin if branches is None else branches)
-    ]
-    if simplify_first_parent:
-        map(lambda walker: walker.simplify_first_parent(), walkers)  # type: ignore
     commit_ids: Iterable[str] = (
-        str(commit.id) for walker in walkers for commit in walker
+        str(commit.id)
+        for walker in generate_walkers(
+            Repository(repository),
+            stdin if branches is None else branches,
+            simplify_first_parent,
+            SORTINGS[sort] if not sort_reverse else (SORTINGS[sort] | GIT_SORT_REVERSE),
+        )
+        for commit in walker
     )
     commit_ids = commit_ids if not drop_duplicates else iter_distinct(commit_ids)
     commit_ids = commit_ids if limit is None else islice(commit_ids, limit)
@@ -113,30 +115,15 @@ def analyze(
     metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
     commits: Optional[FileText] = None,
     workers: int = 1,
-    global_cache: bool = False,
 ) -> None:
     """Analyze commits of a repository."""
-    workers = max(workers, 1)
-    tree_m, blob_m, unit_m = validate_metrics(metrics)
-
-    cache: Dict[str, bool]
-    if global_cache:
-        manager = Manager()
-        cache = manager.dict()
-    else:
-        cache = {}
+    ids = (id.strip() for id in (stdin if commits is None else commits))
     with Pool(
-        max(workers, 1), initialize_worker, (repository, tree_m, blob_m, unit_m, cache)
+        max(workers, 1), initialize_worker, (repository, *validate_metrics(metrics))
     ) as pool:
-        for result in pool.imap(
-            analyze_worker,
-            (
-                commit_id.strip()
-                for commit_id in (stdin if commits is None else commits)
-            ),
-        ):
-            if result is not None:
-                echo(dumps(result, separators=(",", ":"), indent=None))
+        results = (res for res in pool.imap(analyze_worker, ids) if res is not None)
+        for result in results:
+            echo(result)
 
 
 @app.command()
@@ -152,7 +139,7 @@ def clone(
 def branch(path: Path, local: bool = True, remote: bool = True) -> None:
     """Get the branches of a repository."""
     repo = Repository(path)
-    branches: Iterable[str] = tuple()
+    branches: Iterable[str]
     if local and remote:
         branches = repo.branches
     elif local:

@@ -2,6 +2,7 @@
 
 Global variables are accessed in the context of a worker.
 """
+from json import dumps
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple, TypedDict
 
@@ -15,7 +16,7 @@ repo: Repository
 tm: Tuple[str, ...]
 bm: Tuple[str, ...]
 um: Tuple[str, ...]
-cached_oids: Dict[str, bool]
+cached_oids: Dict[str, bool] = {}
 
 
 class MetricBase(TypedDict):
@@ -41,23 +42,18 @@ class BlobOutput(ObjectOutput):
     units: List[UnitOutput]
 
 
-class SignatureOutput(TypedDict):
-    email: str
-    name: str
-    time_offset: int
-    time: int
+SignatureOutput = TypedDict(
+    "SignatureOutput", {"email": str, "name": str, "time_offset": int, "time": int}
+)
 
 
-class CommitBase(ObjectOutput):
+class CommitOutput(ObjectOutput):
     author: SignatureOutput
     commit_time: int
     commit_time_offset: int
     committer: SignatureOutput
     message: str
     parent_ids: List[str]
-
-
-class CommitOutput(CommitBase, total=False):
     metrics: List[Metric]
     blobs: List[BlobOutput]
 
@@ -94,28 +90,17 @@ def parse_commit(
     )
 
 
-def validate_commit(repository: Repository, commit_id: str) -> bool:
-    try:
-        obj = repository.get(commit_id)
-    except ValueError:
-        return False
-    else:
-        return obj is not None and isinstance(obj, Commit)
-
-
 def initialize(
     repository: Path,
-    tree_m: Iterable[str],
-    blob_m: Iterable[str],
-    unit_m: Iterable[str],
-    cache: Dict[str, bool],
+    tree_m: Tuple[str, ...],
+    blob_m: Tuple[str, ...],
+    unit_m: Tuple[str, ...],
 ) -> None:
-    global repo, tm, bm, um, cached_oids
+    global repo, tm, bm, um
     repo = Repository(repository)
-    tm = tuple(sorted(tree_m))
-    bm = tuple(sorted(blob_m))
-    um = tuple(sorted(unit_m))
-    cached_oids = cache
+    tm = tree_m
+    bm = blob_m
+    um = unit_m
 
 
 def analyze_unit(tree: Tree) -> Iterable[Tuple[str, str, str, Metric]]:
@@ -156,7 +141,7 @@ def analyze_tree(tree: Tree) -> Iterable[Metric]:
         yield metric
 
 
-def analyze(commit_id: str) -> Optional[CommitOutput]:
+def analyze(commit_id: str) -> Optional[str]:
     global repo
     try:
         commit = repo.get(commit_id)
@@ -175,7 +160,7 @@ def analyze(commit_id: str) -> Optional[CommitOutput]:
         d.setdefault(blob_id, {"name": blob_name, "metrics": [], "units": {}})[
             "metrics"
         ].append(metric)
-    return parse_commit(
+    output = parse_commit(
         commit,
         metrics=analyze_tree(commit.tree),
         blobs=[
@@ -191,3 +176,4 @@ def analyze(commit_id: str) -> Optional[CommitOutput]:
             for blob_id, blob in d.items()
         ],
     )
+    return dumps(output, separators=(",", ":"), indent=None)
