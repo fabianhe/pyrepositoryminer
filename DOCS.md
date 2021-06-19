@@ -25,20 +25,22 @@ $ pyrepositoryminer [OPTIONS] COMMAND [ARGS]...
 
 Analyze commits of a repository.
 
+Either provide the commit ids to analyze on stdin or as a file argument.
+
 **Usage**:
 
 ```console
-$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[halstead]...
+$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[halstead]... [COMMITS]
 ```
 
 **Arguments**:
 
-* `REPOSITORY`: [required]
+* `REPOSITORY`: The path to the bare repository.  [required]
 * `[METRICS]:[halstead]...`
+* `[COMMITS]`: The newline-separated input file of commit ids. Commit ids are read from stdin if this is not passed.  [default: -]
 
 **Options**:
 
-* `--commits FILENAME`
 * `--workers INTEGER`: [default: 1]
 * `--help`: Show this message and exit.
 
@@ -49,12 +51,12 @@ Get the branches of a repository.
 **Usage**:
 
 ```console
-$ pyrepositoryminer branch [OPTIONS] PATH
+$ pyrepositoryminer branch [OPTIONS] REPOSITORY
 ```
 
 **Arguments**:
 
-* `PATH`: [required]
+* `REPOSITORY`: The path to the bare repository.  [required]
 
 **Options**:
 
@@ -85,19 +87,21 @@ $ pyrepositoryminer clone [OPTIONS] URL PATH
 
 Get the commit ids of a repository.
 
+Either provide the branches to get the commit ids from on stdin or as a file argument.
+
 **Usage**:
 
 ```console
-$ pyrepositoryminer commits [OPTIONS] REPOSITORY
+$ pyrepositoryminer commits [OPTIONS] REPOSITORY [BRANCHES]
 ```
 
 **Arguments**:
 
-* `REPOSITORY`: The path to the repository.  [required]
+* `REPOSITORY`: The path to the bare repository.  [required]
+* `[BRANCHES]`: The newline-separated input file of branches to pull the commits from. Branches are read from stdin if this is not passed.  [default: -]
 
 **Options**:
 
-* `--branches FILENAME`: The branches to pull the commits from.
 * `--simplify-first-parent / --no-simplify-first-parent`: [default: True]
 * `--drop-duplicates / --no-drop-duplicates`: [default: False]
 * `--sort [topological|time]`

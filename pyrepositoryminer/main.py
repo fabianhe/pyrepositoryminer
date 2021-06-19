@@ -14,7 +14,7 @@ from pygit2 import (
     Walker,
     clone_repository,
 )
-from typer import Argument, FileText, Option, Typer, echo
+from typer import Argument, Option, Typer, echo
 
 from pyrepositoryminer.analyze import InitArgs, initialize, worker
 from pyrepositoryminer.metrics import NativeBlobMetrics  # type: ignore
@@ -65,7 +65,7 @@ def generate_walkers(
     sorting: int,
 ) -> Iterable[Walker]:
     walkers = tuple(
-        repo.walk(repo.branches[branch_name.strip()].peel().id, sorting)
+        repo.walk(repo.branches[branch_name].peel().id, sorting)
         for branch_name in branch_names
     )
     for walker in walkers if simplify_first_parent else tuple():
@@ -75,9 +75,16 @@ def generate_walkers(
 
 @app.command()
 def commits(
-    repository: Path = Argument(..., help="The path to the repository."),
-    branches: Optional[FileText] = Option(
-        None, help="The branches to pull the commits from."
+    repository: Path = Argument(..., help="The path to the bare repository."),
+    branches: Path = Argument(
+        "-",
+        allow_dash=True,
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        help="The newline-separated input file of branches to pull the commits from. Branches are read from stdin if this is not passed.",  # noqa: E501
     ),
     simplify_first_parent: bool = True,
     drop_duplicates: bool = False,
@@ -85,12 +92,21 @@ def commits(
     sort_reverse: bool = False,
     limit: Optional[int] = None,
 ) -> None:
-    """Get the commit ids of a repository."""
+    """Get the commit ids of a repository.
+
+    Either provide the branches to get the commit ids from on stdin or as a file argument."""  # noqa: E501
+    branch_names: Iterable[str]
+    if branches != Path("-"):
+        with open(branches) as f:
+            branch_names = [line for line in f]
+    else:
+        branch_names = (line for line in stdin)
+    branch_names = (branch.strip() for branch in branch_names)
     commit_ids: Iterable[str] = (
         str(commit.id)
         for walker in generate_walkers(
             Repository(repository),
-            stdin if branches is None else branches,
+            branch_names,
             simplify_first_parent,
             SORTINGS[sort] if not sort_reverse else (SORTINGS[sort] | GIT_SORT_REVERSE),
         )
@@ -104,13 +120,30 @@ def commits(
 
 @app.command()
 def analyze(
-    repository: Path,
+    repository: Path = Argument(..., help="The path to the bare repository."),
     metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
-    commits: Optional[FileText] = None,
+    commits: Path = Argument(
+        "-",
+        allow_dash=True,
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        help="The newline-separated input file of commit ids. Commit ids are read from stdin if this is not passed.",  # noqa: E501
+    ),
     workers: int = 1,
 ) -> None:
-    """Analyze commits of a repository."""
-    ids = (id.strip() for id in (stdin if commits is None else commits))
+    """Analyze commits of a repository.
+
+    Either provide the commit ids to analyze on stdin or as a file argument."""
+    ids: Iterable[str]
+    if commits != Path("-"):
+        with open(commits) as f:
+            ids = [line for line in f]
+    else:
+        ids = (line for line in stdin)
+    ids = (id.strip() for id in ids)
     native_blob_metrics = (
         tuple()
         if metrics is None
@@ -136,9 +169,13 @@ def clone(
 
 
 @app.command()
-def branch(path: Path, local: bool = True, remote: bool = True) -> None:
+def branch(
+    repository: Path = Argument(..., help="The path to the bare repository."),
+    local: bool = True,
+    remote: bool = True,
+) -> None:
     """Get the branches of a repository."""
-    repo = Repository(path)
+    repo = Repository(repository)
     branches: Iterable[str]
     if local and remote:
         branches = repo.branches
