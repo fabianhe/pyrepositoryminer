@@ -66,7 +66,6 @@ class NativeBlobFilter:
 
 
 class NativeBlobMetric(ABC):
-    name: str
     filter: NativeBlobFilter
 
     async def cache_hit(self, blob_tup: BlobTuple) -> Iterable[Metric]:
@@ -82,3 +81,8 @@ class NativeBlobMetric(ABC):
             return await self.cache_hit(tup)
         else:
             return await self.analyze(tup)
+
+    @classmethod
+    @property
+    def name(cls) -> str:
+        return str(cls.__name__).lower()

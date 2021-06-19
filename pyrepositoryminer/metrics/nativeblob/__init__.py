@@ -1,6 +1,7 @@
 from typing import Awaitable, Callable, Dict, Iterable, Type
 
 from pyrepositoryminer.metrics.nativeblob.halstead import Halstead
+from pyrepositoryminer.metrics.nativeblob.raw import Raw
 from pyrepositoryminer.metrics.structs import BlobTuple, Metric
 
 Metrics: Dict[
@@ -8,4 +9,4 @@ Metrics: Dict[
     Type[Callable[[BlobTuple], Awaitable[Iterable[Metric]]]],
 ]
 
-Metrics = {"halstead": Halstead}
+Metrics = {str(metric.__name__).lower(): metric for metric in (Halstead, Raw)}
