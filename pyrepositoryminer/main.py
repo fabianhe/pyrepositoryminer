@@ -121,7 +121,6 @@ def commits(
 @app.command()
 def analyze(
     repository: Path = Argument(..., help="The path to the bare repository."),
-    metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
     commits: Path = Argument(
         "-",
         allow_dash=True,
@@ -132,6 +131,7 @@ def analyze(
         readable=True,
         help="The newline-separated input file of commit ids. Commit ids are read from stdin if this is not passed.",  # noqa: E501
     ),
+    metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
     workers: int = 1,
 ) -> None:
     """Analyze commits of a repository.
@@ -152,7 +152,7 @@ def analyze(
     with Pool(
         max(workers, 1),
         initialize,
-        tuple(InitArgs(repository, native_blob_metrics)),
+        (InitArgs(repository, native_blob_metrics),),
     ) as pool:
         results = (res for res in pool.imap(worker, ids) if res is not None)
         for result in results:

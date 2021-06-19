@@ -30,14 +30,14 @@ Either provide the commit ids to analyze on stdin or as a file argument.
 **Usage**:
 
 ```console
-$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[halstead]... [COMMITS]
+$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [COMMITS] [METRICS]:[halstead]...
 ```
 
 **Arguments**:
 
 * `REPOSITORY`: The path to the bare repository.  [required]
-* `[METRICS]:[halstead]...`
 * `[COMMITS]`: The newline-separated input file of commit ids. Commit ids are read from stdin if this is not passed.  [default: -]
+* `[METRICS]:[halstead]...`
 
 **Options**:
 
