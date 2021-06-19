@@ -37,14 +37,15 @@ class NativeBlobFilter:
         self.cached_oids: Set[str] = set()
 
     async def __call__(self, tup: BlobTuple) -> bool:
-        if tup.is_cached and (tup.blob.id not in self.cached_oids):
-            return False  # cached but not filtered
-        elif not tup.is_cached:
+        if tup.is_cached:
+            if tup.blob.id in self.cached_oids:
+                return True
+        else:
             for val in as_completed(tuple(filter(tup) for filter in self.filters)):
-                if await val:  # a filter catches the tuple
+                if await val:
                     self.cached_oids.add(tup.blob.id)
-                    return True  # now filter-cached
-        return False  # neither cached nor filtered
+                    return True
+        return False
 
     @staticmethod
     def endswith(ending: str) -> Callable[[BlobTuple], Awaitable[bool]]:
@@ -73,9 +74,7 @@ class NativeBlobMetric(ABC):
 
     @final
     async def __call__(self, tup: BlobTuple) -> Iterable[Metric]:
-        if await self.filter(tup):
-            return []
-        elif tup.is_cached:
+        if tup.is_cached:
             return await self.cache_hit(tup)
         else:
             return await self.analyze(tup)

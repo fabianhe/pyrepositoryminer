@@ -30,12 +30,13 @@ AvailableMetrics = Enum(  # type: ignore
 class Sort(str, Enum):
     topological = "topological"
     time = "time"
+    none = "none"
 
 
 SORTINGS: Dict[Optional[str], int] = {
     "topological": GIT_SORT_TOPOLOGICAL,
     "time": GIT_SORT_TIME,
-    None: GIT_SORT_NONE,
+    "none": GIT_SORT_NONE,
 }
 
 
@@ -88,8 +89,8 @@ def commits(
     ),
     simplify_first_parent: bool = True,
     drop_duplicates: bool = False,
-    sort: Optional[Sort] = Option(None, case_sensitive=False),
-    sort_reverse: bool = False,
+    sort: Sort = Option(Sort.topological, case_sensitive=False),
+    sort_reverse: bool = True,
     limit: Optional[int] = None,
 ) -> None:
     """Get the commit ids of a repository.

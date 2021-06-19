@@ -104,7 +104,7 @@ $ pyrepositoryminer commits [OPTIONS] REPOSITORY [BRANCHES]
 
 * `--simplify-first-parent / --no-simplify-first-parent`: [default: True]
 * `--drop-duplicates / --no-drop-duplicates`: [default: False]
-* `--sort [topological|time]`
-* `--sort-reverse / --no-sort-reverse`: [default: False]
+* `--sort [topological|time|none]`: [default: topological]
+* `--sort-reverse / --no-sort-reverse`: [default: True]
 * `--limit INTEGER`
 * `--help`: Show this message and exit.

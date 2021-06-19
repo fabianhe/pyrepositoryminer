@@ -15,7 +15,7 @@ class Halstead(NativeBlobMetric):
                 self.name,
                 None,
                 True,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.blob.name),
+                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
             )
         ]
 
@@ -29,7 +29,7 @@ class Halstead(NativeBlobMetric):
                 self.name,
                 fn_data._asdict(),
                 False,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.blob.name),
+                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
                 fn_name,
             )
             for fn_name, fn_data in h_data.functions
@@ -39,7 +39,7 @@ class Halstead(NativeBlobMetric):
                 self.name,
                 h_data.total._asdict(),
                 False,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.blob.name),
+                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
             )
         )
         return result

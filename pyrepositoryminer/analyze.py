@@ -5,14 +5,14 @@ Global variables are accessed in the context of a worker.
 from asyncio import run
 from asyncio.tasks import as_completed
 from pathlib import Path
-from typing import Awaitable, Callable, Iterable, NamedTuple, Optional, Tuple
+from typing import Any, Awaitable, Iterable, NamedTuple, Optional, Tuple
 
 from pygit2 import Commit, Repository
 from uvloop import install
 
 from pyrepositoryminer.metrics import NativeBlobMetrics  # type: ignore
 from pyrepositoryminer.metrics.nativeblob.main import NativeBlobVisitor
-from pyrepositoryminer.metrics.structs import BlobTuple, Metric
+from pyrepositoryminer.metrics.structs import Metric
 from pyrepositoryminer.output import CommitOutput, format_output, parse_commit
 from pyrepositoryminer.visitableobject import VisitableObject
 
@@ -23,7 +23,7 @@ class InitArgs(NamedTuple):
 
 
 repo: Repository
-native_blob_metrics: Tuple[Callable[[BlobTuple], Awaitable[Iterable[Metric]]], ...]
+native_blob_metrics: Tuple[Any, ...]
 native_blob_visitor: NativeBlobVisitor
 
 
@@ -58,6 +58,7 @@ async def analyze(commit_id: str) -> Optional[CommitOutput]:
         m(blob_tup)
         async for blob_tup in native_blob_visitor(root)
         for m in native_blob_metrics
+        if not (await m.filter(blob_tup))
     ]
     return parse_commit(commit, *(await categorize_metrics(*futures)))
 

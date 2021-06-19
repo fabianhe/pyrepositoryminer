@@ -15,7 +15,7 @@ class Linecount(NativeBlobMetric):
                 self.name,
                 None,
                 True,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.blob.name),
+                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
             )
         ]
 
@@ -27,7 +27,7 @@ class Linecount(NativeBlobMetric):
                 self.name,
                 int(stdout),
                 False,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.blob.name),
+                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
             )
         ]
         return result
