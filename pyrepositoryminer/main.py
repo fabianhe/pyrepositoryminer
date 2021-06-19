@@ -172,7 +172,7 @@ def clone(
 def branch(
     repository: Path = Argument(..., help="The path to the bare repository."),
     local: bool = True,
-    remote: bool = True,
+    remote: bool = False,
 ) -> None:
     """Get the branches of a repository."""
     repo = Repository(repository)

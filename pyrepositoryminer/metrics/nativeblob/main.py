@@ -12,10 +12,6 @@ from pyrepositoryminer.visitableobject import (
 
 
 class NativeBlobVisitor(TreeVisitor):
-    def __init__(self) -> None:
-        super().__init__()
-        self.blobs: List[BlobTuple] = []
-
     async def visitTree(self, tree: VisitableTree) -> None:
         for visitable_object in tree:
             self.path.append(visitable_object.name)
@@ -29,6 +25,7 @@ class NativeBlobVisitor(TreeVisitor):
     async def __call__(
         self, visitable_object: VisitableObject
     ) -> AsyncIterable[BlobTuple]:
+        self.blobs: List[BlobTuple] = []
         await visitable_object.accept(self)
         for blob in self.blobs:
             yield blob
@@ -39,16 +36,15 @@ class NativeBlobFilter:
         self.filters = filters
         self.cached_oids: Set[str] = set()
 
-    async def __call__(self, tup: BlobTuple) -> AsyncIterable[BlobTuple]:
+    async def __call__(self, tup: BlobTuple) -> bool:
         if tup.is_cached and (tup.blob.id not in self.cached_oids):
-            yield tup  # cached but not filtered
+            return False  # cached but not filtered
         elif not tup.is_cached:
             for val in as_completed(tuple(filter(tup) for filter in self.filters)):
-                if await val:
-                    self.cached_oids.add(tup.blob.id)  # now cached and filtered
-                    break
-            else:
-                yield tup  # neither cached nor filtered
+                if await val:  # a filter catches the tuple
+                    self.cached_oids.add(tup.blob.id)
+                    return True  # now filter-cached
+        return False  # neither cached nor filtered
 
     @staticmethod
     def endswith(ending: str) -> Callable[[BlobTuple], Awaitable[bool]]:
@@ -77,7 +73,9 @@ class NativeBlobMetric(ABC):
 
     @final
     async def __call__(self, tup: BlobTuple) -> Iterable[Metric]:
-        if tup.is_cached:
+        if await self.filter(tup):
+            return []
+        elif tup.is_cached:
             return await self.cache_hit(tup)
         else:
             return await self.analyze(tup)

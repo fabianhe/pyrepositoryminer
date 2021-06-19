@@ -24,6 +24,7 @@ class InitArgs(NamedTuple):
 
 repo: Repository
 native_blob_metrics: Tuple[Callable[[BlobTuple], Awaitable[Iterable[Metric]]], ...]
+native_blob_visitor: NativeBlobVisitor
 
 
 async def categorize_metrics(
@@ -55,18 +56,19 @@ async def analyze(commit_id: str) -> Optional[CommitOutput]:
     root = VisitableObject.from_object(commit.tree)
     futures = [
         m(blob_tup)
-        async for blob_tup in NativeBlobVisitor()(root)
+        async for blob_tup in native_blob_visitor(root)
         for m in native_blob_metrics
     ]
     return parse_commit(commit, *(await categorize_metrics(*futures)))
 
 
 def initialize(init_args: InitArgs) -> None:
-    global repo, native_blob_metrics
+    global repo, native_blob_metrics, native_blob_visitor
     repo = Repository(init_args.repository)
     native_blob_metrics = tuple(
         NativeBlobMetrics[m]() for m in init_args.native_blob_metrics
     )
+    native_blob_visitor = NativeBlobVisitor()
     install()
 
 
