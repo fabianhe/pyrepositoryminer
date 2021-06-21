@@ -1,3 +1,4 @@
+from pyrepositoryminer.metrics.nativeblob.complexity import Complexity
 from pyrepositoryminer.metrics.nativeblob.halstead import Halstead
 from pyrepositoryminer.metrics.nativeblob.linecount import Linecount
 from pyrepositoryminer.metrics.nativeblob.maintainability import Maintainability
@@ -6,5 +7,5 @@ from pyrepositoryminer.metrics.nativeblob.raw import Raw
 
 Metrics = {
     metric.name: metric
-    for metric in (Halstead, Raw, Maintainability, Linecount, Nesting)
+    for metric in (Halstead, Raw, Maintainability, Linecount, Nesting, Complexity)
 }
