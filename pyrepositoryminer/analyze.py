@@ -11,6 +11,7 @@ from pygit2 import Commit, Repository
 from uvloop import install
 
 from pyrepositoryminer.metrics import all_metrics
+from pyrepositoryminer.metrics.dir.main import DirMetric, DirVisitor
 from pyrepositoryminer.metrics.nativeblob.main import (
     NativeBlobMetric,
     NativeBlobVisitor,
@@ -34,6 +35,8 @@ native_blob_metrics: Tuple[Any, ...]
 native_blob_visitor: NativeBlobVisitor
 native_tree_metrics: Tuple[Any, ...]
 native_tree_visitor: NativeTreeVisitor
+dir_metrics: Tuple[Any, ...]
+dir_visitor: DirVisitor
 
 
 async def categorize_metrics(
@@ -62,7 +65,7 @@ async def analyze(commit_id: str) -> Optional[CommitOutput]:
     else:
         if commit is None or not isinstance(commit, Commit):
             return None
-    root = VisitableObject.from_object(commit.tree)
+    root = VisitableObject.from_object(commit)
     futures = [
         m(blob_tup)
         async for blob_tup in native_blob_visitor(root)
@@ -71,7 +74,11 @@ async def analyze(commit_id: str) -> Optional[CommitOutput]:
     ]
     tree_tup = await native_tree_visitor(root)
     futures.extend(m(tree_tup) for m in native_tree_metrics)
-    return parse_commit(commit, *(await categorize_metrics(*futures)))
+    await dir_visitor(root)
+    async with dir_visitor:
+        futures.extend(m(dir_visitor.dir_tup) for m in dir_metrics)
+        mets = await categorize_metrics(*futures)
+    return parse_commit(commit, *mets)
 
 
 def initialize(init_args: InitArgs) -> None:
@@ -79,6 +86,7 @@ def initialize(init_args: InitArgs) -> None:
     global repo
     global native_blob_metrics, native_blob_visitor
     global native_tree_metrics, native_tree_visitor
+    global dir_metrics, dir_visitor
     repo = Repository(init_args.repository)
     native_blob_metrics = tuple(
         all_metrics[m]()
@@ -92,6 +100,12 @@ def initialize(init_args: InitArgs) -> None:
         if issubclass(all_metrics[m], NativeTreeMetric)
     )
     native_tree_visitor = NativeTreeVisitor()
+    dir_metrics = tuple(
+        all_metrics[m]()
+        for m in init_args.metrics
+        if issubclass(all_metrics[m], DirMetric)
+    )
+    dir_visitor = DirVisitor(repo)
 
 
 def worker(commit_id: str) -> Optional[str]:

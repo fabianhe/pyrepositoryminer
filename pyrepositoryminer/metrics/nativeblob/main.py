@@ -25,6 +25,7 @@ class NativeBlobVisitor(TreeVisitor):
     async def __call__(
         self, visitable_object: VisitableObject
     ) -> AsyncIterable[BlobTuple]:
+        self.visited_commit = False
         self.blobs: List[BlobTuple] = []
         await visitable_object.accept(self)
         for blob in self.blobs:

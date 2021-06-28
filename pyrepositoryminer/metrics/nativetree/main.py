@@ -19,6 +19,7 @@ class NativeTreeVisitor(TreeVisitor):
         pass
 
     async def __call__(self, visitable_object: VisitableObject) -> Optional[TreeTuple]:
+        self.visited_commit = False
         self.tree = None
         await visitable_object.accept(self)
         return self.tree

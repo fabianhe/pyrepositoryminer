@@ -3,6 +3,7 @@ from typing import Any, AsyncIterable, Awaitable, List, Set, Union
 
 from pyrepositoryminer.visitableobject import (
     VisitableBlob,
+    VisitableCommit,
     VisitableObject,
     VisitableTree,
 )
@@ -12,6 +13,7 @@ class TreeVisitor(ABC):
     def __init__(self) -> None:
         self.oid_cache: Set[str] = set()
         self.path: List[str] = []
+        self.visited_commit: bool = False
 
     @property
     def pathname(self) -> str:
@@ -22,6 +24,12 @@ class TreeVisitor(ABC):
 
     def cache_oid(self, oid: str) -> None:
         self.oid_cache.add(oid)
+
+    async def visitCommit(self, commit: VisitableCommit) -> None:
+        if self.visited_commit:
+            return
+        self.visited_commit = True
+        await commit.tree.accept(self)
 
     @abstractmethod
     async def visitTree(self, tree: VisitableTree) -> None:
