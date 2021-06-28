@@ -7,16 +7,13 @@ from pyrepositoryminer.metrics.nativeblob.nesting import Nesting
 from pyrepositoryminer.metrics.nativeblob.pylinecount import Pylinecount
 from pyrepositoryminer.metrics.nativeblob.raw import Raw
 
-Metrics = {
-    metric.name: metric
-    for metric in (
-        Halstead,
-        Raw,
-        Maintainability,
-        Linecount,
-        Nesting,
-        Complexity,
-        Pylinecount,
-        Linelength,
-    )
-}
+__all__ = (
+    "Halstead",
+    "Raw",
+    "Maintainability",
+    "Linecount",
+    "Nesting",
+    "Complexity",
+    "Pylinecount",
+    "Linelength",
+)

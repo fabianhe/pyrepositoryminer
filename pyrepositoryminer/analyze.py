@@ -10,8 +10,15 @@ from typing import Any, Awaitable, Iterable, NamedTuple, Optional, Tuple
 from pygit2 import Commit, Repository
 from uvloop import install
 
-from pyrepositoryminer.metrics import NativeBlobMetrics  # type: ignore
-from pyrepositoryminer.metrics.nativeblob.main import NativeBlobVisitor
+from pyrepositoryminer.metrics import all_metrics
+from pyrepositoryminer.metrics.nativeblob.main import (
+    NativeBlobMetric,
+    NativeBlobVisitor,
+)
+from pyrepositoryminer.metrics.nativetree.main import (
+    NativeTreeMetric,
+    NativeTreeVisitor,
+)
 from pyrepositoryminer.metrics.structs import Metric
 from pyrepositoryminer.output import CommitOutput, format_output, parse_commit
 from pyrepositoryminer.visitableobject import VisitableObject
@@ -19,12 +26,14 @@ from pyrepositoryminer.visitableobject import VisitableObject
 
 class InitArgs(NamedTuple):
     repository: Path
-    native_blob_metrics: Tuple[str, ...]
+    metrics: Tuple[str, ...]
 
 
 repo: Repository
 native_blob_metrics: Tuple[Any, ...]
 native_blob_visitor: NativeBlobVisitor
+native_tree_metrics: Tuple[Any, ...]
+native_tree_visitor: NativeTreeVisitor
 
 
 async def categorize_metrics(
@@ -60,17 +69,29 @@ async def analyze(commit_id: str) -> Optional[CommitOutput]:
         for m in native_blob_metrics
         if not (await m.filter(blob_tup))
     ]
+    tree_tup = await native_tree_visitor(root)
+    futures.extend(m(tree_tup) for m in native_tree_metrics)
     return parse_commit(commit, *(await categorize_metrics(*futures)))
 
 
 def initialize(init_args: InitArgs) -> None:
-    global repo, native_blob_metrics, native_blob_visitor
+    install()
+    global repo
+    global native_blob_metrics, native_blob_visitor
+    global native_tree_metrics, native_tree_visitor
     repo = Repository(init_args.repository)
     native_blob_metrics = tuple(
-        NativeBlobMetrics[m]() for m in init_args.native_blob_metrics
+        all_metrics[m]()
+        for m in init_args.metrics
+        if issubclass(all_metrics[m], NativeBlobMetric)
     )
     native_blob_visitor = NativeBlobVisitor()
-    install()
+    native_tree_metrics = tuple(
+        all_metrics[m]()
+        for m in init_args.metrics
+        if issubclass(all_metrics[m], NativeTreeMetric)
+    )
+    native_tree_visitor = NativeTreeVisitor()
 
 
 def worker(commit_id: str) -> Optional[str]:

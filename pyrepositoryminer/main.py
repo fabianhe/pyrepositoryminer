@@ -17,13 +17,13 @@ from pygit2 import (
 from typer import Argument, Option, Typer, echo
 
 from pyrepositoryminer.analyze import InitArgs, initialize, worker
-from pyrepositoryminer.metrics import NativeBlobMetrics  # type: ignore
+from pyrepositoryminer.metrics import all_metrics
 
 app = Typer(help="Efficient Repository Mining in Python.")
 
 AvailableMetrics = Enum(  # type: ignore
     "AvailableMetrics",
-    sorted((key, key) for key in {*NativeBlobMetrics}),
+    sorted((key, key) for key in all_metrics),
 )
 
 
@@ -52,11 +52,11 @@ def iter_distinct(iterable: Iterable[T]) -> Iterable[T]:
 
 def validate_metrics(
     metrics: Optional[List[AvailableMetrics]],
-) -> Tuple[Tuple[str, ...]]:
+) -> Tuple[str, ...]:
     distinct: Set[str] = (
         set() if metrics is None else {metric.value for metric in metrics}
     )
-    return (tuple(sorted(distinct & NativeBlobMetrics.keys())),)
+    return tuple(sorted(distinct & all_metrics.keys()))
 
 
 def generate_walkers(
@@ -145,15 +145,10 @@ def analyze(
     else:
         ids = (line for line in stdin)
     ids = (id.strip() for id in ids)
-    native_blob_metrics = (
-        tuple()
-        if metrics is None
-        else tuple(sorted({m.value for m in metrics if m.value in NativeBlobMetrics}))
-    )
     with Pool(
         max(workers, 1),
         initialize,
-        (InitArgs(repository, native_blob_metrics),),
+        (InitArgs(repository, validate_metrics(metrics)),),
     ) as pool:
         results = (res for res in pool.imap(worker, ids) if res is not None)
         for result in results:

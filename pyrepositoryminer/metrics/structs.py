@@ -1,6 +1,16 @@
 from typing import Any, NamedTuple, Optional
 
-from pyrepositoryminer.visitableobject import VisitableBlob
+from pyrepositoryminer.visitableobject import VisitableBlob, VisitableTree
+
+
+class DirTuple(NamedTuple):
+    path: str
+    is_cached: bool
+
+
+class TreeTuple(NamedTuple):
+    tree: VisitableTree
+    is_cached: bool
 
 
 class BlobTuple(NamedTuple):
