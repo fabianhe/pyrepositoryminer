@@ -1,8 +1,10 @@
+from typing import Any, Dict
+
 import pyrepositoryminer.metrics.dir as DirMetrics
 import pyrepositoryminer.metrics.nativeblob as NativeBlobMetrics
 import pyrepositoryminer.metrics.nativetree as NativeTreeMetrics
 
-all_metrics = {
+all_metrics: Dict[str, Any] = {
     **{
         getattr(NativeBlobMetrics, m).name: getattr(NativeBlobMetrics, m)
         for m in NativeBlobMetrics.__all__
