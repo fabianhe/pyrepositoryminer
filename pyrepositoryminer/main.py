@@ -3,7 +3,7 @@ from itertools import filterfalse, islice
 from multiprocessing import Pool
 from pathlib import Path
 from sys import stdin
-from typing import Dict, Hashable, Iterable, List, Optional, Set, Tuple, TypeVar
+from typing import Hashable, Iterable, List, Optional, Set, Tuple, TypeVar
 
 from pygit2 import (
     GIT_SORT_NONE,
@@ -22,8 +22,9 @@ from pyrepositoryminer.metrics import all_metrics
 app = Typer(help="Efficient Repository Mining in Python.")
 
 AvailableMetrics = Enum(  # type: ignore
+    # https://github.com/python/mypy/issues/5317
     "AvailableMetrics",
-    sorted((key, key) for key in all_metrics.keys()),
+    [(k, k) for k in sorted(all_metrics.keys())],
 )
 
 
@@ -32,12 +33,16 @@ class Sort(str, Enum):
     time = "time"
     none = "none"
 
+    def __init__(self, name: str) -> None:
+        self.sort_name = name
 
-SORTINGS: Dict[Optional[str], int] = {
-    "topological": GIT_SORT_TOPOLOGICAL,
-    "time": GIT_SORT_TIME,
-    "none": GIT_SORT_NONE,
-}
+    @property
+    def flag(self):  # type: ignore
+        return {
+            "topological": GIT_SORT_TOPOLOGICAL,
+            "time": GIT_SORT_TIME,
+            "none": GIT_SORT_NONE,
+        }[self.sort_name]
 
 
 T = TypeVar("T", bound=Hashable)
@@ -109,7 +114,7 @@ def commits(
             Repository(repository),
             branch_names,
             simplify_first_parent,
-            SORTINGS[sort] if not sort_reverse else (SORTINGS[sort] | GIT_SORT_REVERSE),
+            sort.flag if not sort_reverse else (sort.flag | GIT_SORT_REVERSE),
         )
         for commit in walker
     )
