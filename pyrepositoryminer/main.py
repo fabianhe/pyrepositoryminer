@@ -1,4 +1,7 @@
 from enum import Enum
+from functools import reduce
+from importlib import import_module
+from inspect import isclass
 from itertools import filterfalse, islice
 from multiprocessing import Pool
 from pathlib import Path
@@ -14,10 +17,13 @@ from pygit2 import (
     Walker,
     clone_repository,
 )
-from typer import Argument, Option, Typer, echo
+from typer import Abort, Argument, Option, Typer, echo
 
 from pyrepositoryminer.analyze import InitArgs, initialize, worker
 from pyrepositoryminer.metrics import all_metrics
+from pyrepositoryminer.metrics.dir.main import DirMetric
+from pyrepositoryminer.metrics.nativeblob.main import NativeBlobMetric
+from pyrepositoryminer.metrics.nativetree.main import NativeTreeMetric
 
 app = Typer(help="Efficient Repository Mining in Python.")
 
@@ -46,6 +52,33 @@ class Sort(str, Enum):
 
 
 T = TypeVar("T", bound=Hashable)
+
+
+def import_metric(import_str: str):  # type: ignore  # TODO make this a metric abc
+    module_str, _, attrs_str = import_str.partition(":")
+    if not module_str or not attrs_str:
+        echo(f'Import string "{import_str}" must be in format "<module>:<attribute>"')
+        raise Abort()
+    try:
+        module = import_module(module_str)
+    except ImportError as e:
+        if e.name != module_str:
+            raise e from None
+        echo(f'Could not import module "{module_str}"')
+        raise Abort()
+    try:
+        instance = reduce(getattr, (module, *attrs_str.split(".")))  # type: ignore
+    except AttributeError:
+        print(f'Attribute "{attrs_str}" not found in module "{module_str}"')
+        raise Abort()
+    if not isclass(instance):
+        print(f'Instance "{instance}" must be a class')
+        raise Abort()
+    parents = (NativeBlobMetric, NativeTreeMetric, DirMetric)
+    if not any(issubclass(instance, parent) for parent in parents):  # type: ignore
+        print(f'Instance "{instance}" must subclass a pyrepositoryminer metric class')
+        raise Abort()
+    return instance
 
 
 def iter_distinct(iterable: Iterable[T]) -> Iterable[T]:
@@ -138,26 +171,24 @@ def analyze(
         help="The newline-separated input file of commit ids. Commit ids are read from stdin if this is not passed.",  # noqa: E501
     ),
     metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
+    custom_metrics: List[str] = Option([]),
     workers: int = 1,
 ) -> None:
     """Analyze commits of a repository.
 
     Either provide the commit ids to analyze on stdin or as a file argument."""
-    ids: Iterable[str]
-    if commits != Path("-"):
-        with open(commits) as f:
-            ids = [line for line in f]
-    else:
-        ids = (line for line in stdin)
-    ids = (id.strip() for id in ids)
+    c_metrics = tuple(map(import_metric, set(custom_metrics)))
+    f = stdin if commits == Path("-") else open(commits)
+    ids = (id.strip() for id in f)
     with Pool(
         max(workers, 1),
         initialize,
-        (InitArgs(repository, validate_metrics(metrics)),),
+        (InitArgs(repository, validate_metrics(metrics), c_metrics),),
     ) as pool:
         results = (res for res in pool.imap(worker, ids) if res is not None)
         for result in results:
             echo(result)
+    f.close()
 
 
 @app.command()

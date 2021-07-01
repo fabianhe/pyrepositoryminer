@@ -41,6 +41,7 @@ $ pyrepositoryminer analyze [OPTIONS] REPOSITORY [COMMITS] [METRICS]:[blobcount|
 
 **Options**:
 
+* `--custom-metrics TEXT`: [default: ]
 * `--workers INTEGER`: [default: 1]
 * `--help`: Show this message and exit.
 

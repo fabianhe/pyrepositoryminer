@@ -28,6 +28,7 @@ from pyrepositoryminer.visitableobject import VisitableObject
 class InitArgs(NamedTuple):
     repository: Path
     metrics: Tuple[str, ...]
+    custom_metrics: Tuple[Any, ...]  # TODO make this a metric abc
 
 
 repo: Repository
@@ -89,21 +90,30 @@ def initialize(init_args: InitArgs) -> None:
     global dir_metrics, dir_visitor
     repo = Repository(init_args.repository)
     native_blob_metrics = tuple(
-        all_metrics[m]()
-        for m in init_args.metrics
-        if issubclass(all_metrics[m], NativeBlobMetric)
+        [
+            all_metrics[m]()
+            for m in init_args.metrics
+            if issubclass(all_metrics[m], NativeBlobMetric)
+        ]
+        + [m() for m in init_args.custom_metrics if issubclass(m, NativeBlobMetric)]
     )
     native_blob_visitor = NativeBlobVisitor()
     native_tree_metrics = tuple(
-        all_metrics[m]()
-        for m in init_args.metrics
-        if issubclass(all_metrics[m], NativeTreeMetric)
+        [
+            all_metrics[m]()
+            for m in init_args.metrics
+            if issubclass(all_metrics[m], NativeTreeMetric)
+        ]
+        + [m() for m in init_args.custom_metrics if issubclass(m, NativeTreeMetric)]
     )
     native_tree_visitor = NativeTreeVisitor()
     dir_metrics = tuple(
-        all_metrics[m]()
-        for m in init_args.metrics
-        if issubclass(all_metrics[m], DirMetric)
+        [
+            all_metrics[m]()
+            for m in init_args.metrics
+            if issubclass(all_metrics[m], DirMetric)
+        ]
+        + [m() for m in init_args.custom_metrics if issubclass(m, DirMetric)]
     )
     dir_visitor = DirVisitor(repo)
 
