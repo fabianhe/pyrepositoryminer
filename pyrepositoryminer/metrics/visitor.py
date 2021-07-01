@@ -1,72 +1,46 @@
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, final
+from typing import Any, AsyncIterable, Awaitable, List, Set, Union
 
-from pygit2 import Blob, Tree
-
-from pyrepositoryminer.visitableobject import VisitableBlob, VisitableTree
+from pyrepositoryminer.visitableobject import (
+    VisitableBlob,
+    VisitableCommit,
+    VisitableObject,
+    VisitableTree,
+)
 
 
 class TreeVisitor(ABC):
-    def __init__(self, cache: Dict[str, bool]) -> None:
-        self.cached_oids = cache
+    def __init__(self) -> None:
+        self.oid_cache: Set[str] = set()
         self.path: List[str] = []
+        self.visited_commit: bool = False
 
     @property
     def pathname(self) -> str:
-        return "".join(self.path)
+        return "/".join(self.path)
+
+    def oid_is_cached(self, oid: str) -> bool:
+        return oid in self.oid_cache
+
+    def cache_oid(self, oid: str) -> None:
+        self.oid_cache.add(oid)
+
+    async def visitCommit(self, commit: VisitableCommit) -> None:
+        if self.visited_commit:
+            return
+        self.visited_commit = True
+        await commit.tree.accept(self)
 
     @abstractmethod
-    def is_filtered(self, blob: VisitableBlob) -> bool:
-        """Check whether a blob is filtered."""
+    async def visitTree(self, tree: VisitableTree) -> None:
         pass
 
-    def is_cached(self, blob: VisitableBlob) -> bool:
-        """Check whether a blob is cached."""
-        return self.cached_oids.setdefault(str(blob.obj.id), False)
-
-    def cache_blob(self, blob: VisitableBlob) -> None:
-        """Cache a blob."""
-        self.cached_oids[str(blob.obj.id)] = True
-
     @abstractmethod
-    def handle_cache_hit(self, blob: VisitableBlob) -> None:
+    async def visitBlob(self, blob: VisitableBlob) -> None:
         pass
 
     @abstractmethod
-    def analyze_blob(self, blob: VisitableBlob) -> None:
-        """Analyze a blob."""
-        pass
-
-    @final
-    def visitBlob(self, blob: VisitableBlob) -> TreeVisitor:
-        if self.is_cached(blob):
-            self.handle_cache_hit(blob)
-            return self
-        elif self.is_filtered(blob):
-            return self
-        self.cache_blob(blob)
-        self.analyze_blob(blob)
-        return self
-
-    def visitTree(self, tree: VisitableTree) -> TreeVisitor:
-        for obj in tree.obj:
-            id = str(obj.id)
-            if isinstance(obj, Tree):
-                self.path.append(f"{obj.name}/")
-                self.cached_oids.setdefault(id, False)
-                VisitableTree(obj).accept(self)
-                self.cached_oids[id] = True
-            elif isinstance(obj, Blob):
-                self.path.append(str(obj.name))
-                VisitableBlob(obj).accept(self)
-            else:
-                continue
-            self.path.pop(-1)
-        return self
-
-    @property
-    @abstractmethod
-    def result(self) -> Any:
+    def __call__(
+        self, visitable_object: VisitableObject
+    ) -> Union[Awaitable[Any], AsyncIterable[Any]]:
         pass

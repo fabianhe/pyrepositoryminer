@@ -14,9 +14,35 @@ from ast import (
     parse,
     withitem,
 )
+from typing import Iterable
 
-from pyrepositoryminer.metrics.blob import BlobMetric
-from pyrepositoryminer.visitableobject import VisitableBlob
+from pyrepositoryminer.metrics.nativeblob.main import NativeBlobFilter, NativeBlobMetric
+from pyrepositoryminer.metrics.structs import BlobTuple, Metric, ObjectIdentifier
+
+
+class Nesting(NativeBlobMetric):
+    filter = NativeBlobFilter(NativeBlobFilter.endswith(".py"))
+
+    async def cache_hit(self, blob_tup: BlobTuple) -> Iterable[Metric]:
+        return [
+            Metric(
+                self.name,
+                None,
+                True,
+                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
+            )
+        ]
+
+    async def analyze(self, blob_tup: BlobTuple) -> Iterable[Metric]:
+        result = [
+            Metric(
+                self.name,
+                NestingASTVisitor().visit(parse(blob_tup.blob.obj.data)).result,
+                False,
+                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
+            )
+        ]
+        return result
 
 
 class NestingASTVisitor(NodeVisitor):
@@ -65,11 +91,3 @@ class NestingASTVisitor(NodeVisitor):
     @property
     def result(self) -> int:
         return self.max_n
-
-
-class Nesting(BlobMetric):
-    def is_filtered(self, blob: VisitableBlob) -> bool:
-        return not str(blob.obj.name).endswith(".py")
-
-    def analyze_blob_value(self, blob: VisitableBlob) -> int:
-        return NestingASTVisitor().visit(parse(blob.obj.data)).result

@@ -20,26 +20,27 @@ $ pyrepositoryminer [OPTIONS] COMMAND [ARGS]...
 * `branch`: Get the branches of a repository.
 * `clone`: Clone a repository to a path.
 * `commits`: Get the commit ids of a repository.
-* `to-csv`: Format a JSONL input as CSV.
 
 ## `pyrepositoryminer analyze`
 
 Analyze commits of a repository.
 
+Either provide the commit ids to analyze on stdin or as a file argument.
+
 **Usage**:
 
 ```console
-$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[complexity|filecount|halstead|halstead_total|linecount|linelength|loc|maintainability|nesting|raw]...
+$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [COMMITS] [METRICS]:[blobcount|complexity|halstead|linecount|linelength|loc|maintainability|nesting|pylinecount|raw|tokei]...
 ```
 
 **Arguments**:
 
-* `REPOSITORY`: [required]
-* `[METRICS]:[complexity|filecount|halstead|halstead_total|linecount|linelength|loc|maintainability|nesting|raw]...`
+* `REPOSITORY`: The path to the bare repository.  [required]
+* `[COMMITS]`: The newline-separated input file of commit ids. Commit ids are read from stdin if this is not passed.  [default: -]
+* `[METRICS]:[blobcount|complexity|halstead|linecount|linelength|loc|maintainability|nesting|pylinecount|raw|tokei]...`
 
 **Options**:
 
-* `--commits FILENAME`
 * `--workers INTEGER`: [default: 1]
 * `--help`: Show this message and exit.
 
@@ -50,17 +51,17 @@ Get the branches of a repository.
 **Usage**:
 
 ```console
-$ pyrepositoryminer branch [OPTIONS] PATH
+$ pyrepositoryminer branch [OPTIONS] REPOSITORY
 ```
 
 **Arguments**:
 
-* `PATH`: [required]
+* `REPOSITORY`: The path to the bare repository.  [required]
 
 **Options**:
 
 * `--local / --no-local`: [default: True]
-* `--remote / --no-remote`: [default: True]
+* `--remote / --no-remote`: [default: False]
 * `--help`: Show this message and exit.
 
 ## `pyrepositoryminer clone`
@@ -86,36 +87,24 @@ $ pyrepositoryminer clone [OPTIONS] URL PATH
 
 Get the commit ids of a repository.
 
+Either provide the branches to get the commit ids from on stdin or as a file argument.
+
 **Usage**:
 
 ```console
-$ pyrepositoryminer commits [OPTIONS] REPOSITORY
+$ pyrepositoryminer commits [OPTIONS] REPOSITORY [BRANCHES]
 ```
 
 **Arguments**:
 
-* `REPOSITORY`: The path to the repository.  [required]
+* `REPOSITORY`: The path to the bare repository.  [required]
+* `[BRANCHES]`: The newline-separated input file of branches to pull the commits from. Branches are read from stdin if this is not passed.  [default: -]
 
 **Options**:
 
-* `--branches FILENAME`: The branches to pull the commits from.
 * `--simplify-first-parent / --no-simplify-first-parent`: [default: True]
 * `--drop-duplicates / --no-drop-duplicates`: [default: False]
-* `--sort [topological|time]`
-* `--sort-reverse / --no-sort-reverse`: [default: False]
+* `--sort [topological|time|none]`: [default: topological]
+* `--sort-reverse / --no-sort-reverse`: [default: True]
 * `--limit INTEGER`
-* `--help`: Show this message and exit.
-
-## `pyrepositoryminer to-csv`
-
-Format a JSONL input as CSV.
-
-**Usage**:
-
-```console
-$ pyrepositoryminer to-csv [OPTIONS]
-```
-
-**Options**:
-
 * `--help`: Show this message and exit.

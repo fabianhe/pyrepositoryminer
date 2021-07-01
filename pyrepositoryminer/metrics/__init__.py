@@ -1,29 +1,18 @@
-from typing import Dict, Type
+from typing import Any, Dict
 
-from pyrepositoryminer.metrics.blob import BlobMetric
-from pyrepositoryminer.metrics.blob.halstead import Halstead as HalsteadTotal
-from pyrepositoryminer.metrics.blob.linecount import Linecount
-from pyrepositoryminer.metrics.blob.maintainability import Maintainability
-from pyrepositoryminer.metrics.blob.nesting import Nesting
-from pyrepositoryminer.metrics.blob.raw import Raw
-from pyrepositoryminer.metrics.tree import TreeMetric
-from pyrepositoryminer.metrics.tree.filecount import Filecount
-from pyrepositoryminer.metrics.tree.loc import LOC
-from pyrepositoryminer.metrics.unit import UnitMetric
-from pyrepositoryminer.metrics.unit.complexity import Complexity
-from pyrepositoryminer.metrics.unit.halstead import Halstead
-from pyrepositoryminer.metrics.unit.linelength import Linelength
+import pyrepositoryminer.metrics.dir as DirMetrics
+import pyrepositoryminer.metrics.nativeblob as NativeBlobMetrics
+import pyrepositoryminer.metrics.nativetree as NativeTreeMetrics
 
-TreeMetrics: Dict[str, Type[TreeMetric]] = {"filecount": Filecount, "loc": LOC}
-BlobMetrics: Dict[str, Type[BlobMetric]] = {
-    "nesting": Nesting,
-    "raw": Raw,
-    "halstead_total": HalsteadTotal,
-    "maintainability": Maintainability,
-    "linecount": Linecount,
+all_metrics: Dict[str, Any] = {
+    **{
+        getattr(NativeBlobMetrics, m).name: getattr(NativeBlobMetrics, m)
+        for m in NativeBlobMetrics.__all__
+    },
+    **{
+        getattr(NativeTreeMetrics, m).name: getattr(NativeTreeMetrics, m)
+        for m in NativeTreeMetrics.__all__
+    },
+    **{getattr(DirMetrics, m).name: getattr(DirMetrics, m) for m in DirMetrics.__all__},
 }
-UnitMetrics: Dict[str, Type[UnitMetric]] = {
-    "complexity": Complexity,
-    "linelength": Linelength,
-    "halstead": Halstead,
-}
+__all__ = ("all_metrics", "NativeBlobMetrics", "NativeTreeMetrics", "DirMetrics")

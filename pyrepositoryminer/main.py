@@ -1,10 +1,9 @@
 from enum import Enum
 from itertools import filterfalse, islice
-from json import loads
 from multiprocessing import Pool
 from pathlib import Path
 from sys import stdin
-from typing import Any, Dict, Hashable, Iterable, List, Optional, Set, Tuple, TypeVar
+from typing import Hashable, Iterable, List, Optional, Set, Tuple, TypeVar
 
 from pygit2 import (
     GIT_SORT_NONE,
@@ -15,31 +14,35 @@ from pygit2 import (
     Walker,
     clone_repository,
 )
-from typer import Argument, FileText, Option, Typer, echo
+from typer import Argument, Option, Typer, echo
 
-from pyrepositoryminer.analyze import CommitOutput
-from pyrepositoryminer.analyze import analyze as analyze_worker
-from pyrepositoryminer.analyze import initialize as initialize_worker
-from pyrepositoryminer.metrics import BlobMetrics, TreeMetrics, UnitMetrics
+from pyrepositoryminer.analyze import InitArgs, initialize, worker
+from pyrepositoryminer.metrics import all_metrics
 
 app = Typer(help="Efficient Repository Mining in Python.")
 
 AvailableMetrics = Enum(  # type: ignore
+    # https://github.com/python/mypy/issues/5317
     "AvailableMetrics",
-    sorted((key, key) for key in {*TreeMetrics, *BlobMetrics, *UnitMetrics}),
+    [(k, k) for k in sorted(all_metrics.keys())],
 )
 
 
 class Sort(str, Enum):
     topological = "topological"
     time = "time"
+    none = "none"
 
+    def __init__(self, name: str) -> None:
+        self.sort_name = name
 
-SORTINGS: Dict[Optional[str], int] = {
-    "topological": GIT_SORT_TOPOLOGICAL,
-    "time": GIT_SORT_TIME,
-    None: GIT_SORT_NONE,
-}
+    @property
+    def flag(self):  # type: ignore
+        return {
+            "topological": GIT_SORT_TOPOLOGICAL,
+            "time": GIT_SORT_TIME,
+            "none": GIT_SORT_NONE,
+        }[self.sort_name]
 
 
 T = TypeVar("T", bound=Hashable)
@@ -54,15 +57,11 @@ def iter_distinct(iterable: Iterable[T]) -> Iterable[T]:
 
 def validate_metrics(
     metrics: Optional[List[AvailableMetrics]],
-) -> Tuple[Tuple[str, ...], Tuple[str, ...], Tuple[str, ...]]:
+) -> Tuple[str, ...]:
     distinct: Set[str] = (
         set() if metrics is None else {metric.value for metric in metrics}
     )
-    return (
-        tuple(sorted(distinct & TreeMetrics.keys())),
-        tuple(sorted(distinct & BlobMetrics.keys())),
-        tuple(sorted(distinct & UnitMetrics.keys())),
-    )
+    return tuple(sorted(distinct & all_metrics.keys()))
 
 
 def generate_walkers(
@@ -72,7 +71,7 @@ def generate_walkers(
     sorting: int,
 ) -> Iterable[Walker]:
     walkers = tuple(
-        repo.walk(repo.branches[branch_name.strip()].peel().id, sorting)
+        repo.walk(repo.branches[branch_name].peel().id, sorting)
         for branch_name in branch_names
     )
     for walker in walkers if simplify_first_parent else tuple():
@@ -82,24 +81,40 @@ def generate_walkers(
 
 @app.command()
 def commits(
-    repository: Path = Argument(..., help="The path to the repository."),
-    branches: Optional[FileText] = Option(
-        None, help="The branches to pull the commits from."
+    repository: Path = Argument(..., help="The path to the bare repository."),
+    branches: Path = Argument(
+        "-",
+        allow_dash=True,
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        help="The newline-separated input file of branches to pull the commits from. Branches are read from stdin if this is not passed.",  # noqa: E501
     ),
     simplify_first_parent: bool = True,
     drop_duplicates: bool = False,
-    sort: Optional[Sort] = Option(None, case_sensitive=False),
-    sort_reverse: bool = False,
+    sort: Sort = Option(Sort.topological, case_sensitive=False),
+    sort_reverse: bool = True,
     limit: Optional[int] = None,
 ) -> None:
-    """Get the commit ids of a repository."""
+    """Get the commit ids of a repository.
+
+    Either provide the branches to get the commit ids from on stdin or as a file argument."""  # noqa: E501
+    branch_names: Iterable[str]
+    if branches != Path("-"):
+        with open(branches) as f:
+            branch_names = [line for line in f]
+    else:
+        branch_names = (line for line in stdin)
+    branch_names = (branch.strip() for branch in branch_names)
     commit_ids: Iterable[str] = (
         str(commit.id)
         for walker in generate_walkers(
             Repository(repository),
-            stdin if branches is None else branches,
+            branch_names,
             simplify_first_parent,
-            SORTINGS[sort] if not sort_reverse else (SORTINGS[sort] | GIT_SORT_REVERSE),
+            sort.flag if not sort_reverse else (sort.flag | GIT_SORT_REVERSE),
         )
         for commit in walker
     )
@@ -111,17 +126,36 @@ def commits(
 
 @app.command()
 def analyze(
-    repository: Path,
+    repository: Path = Argument(..., help="The path to the bare repository."),
+    commits: Path = Argument(
+        "-",
+        allow_dash=True,
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        help="The newline-separated input file of commit ids. Commit ids are read from stdin if this is not passed.",  # noqa: E501
+    ),
     metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
-    commits: Optional[FileText] = None,
     workers: int = 1,
 ) -> None:
-    """Analyze commits of a repository."""
-    ids = (id.strip() for id in (stdin if commits is None else commits))
+    """Analyze commits of a repository.
+
+    Either provide the commit ids to analyze on stdin or as a file argument."""
+    ids: Iterable[str]
+    if commits != Path("-"):
+        with open(commits) as f:
+            ids = [line for line in f]
+    else:
+        ids = (line for line in stdin)
+    ids = (id.strip() for id in ids)
     with Pool(
-        max(workers, 1), initialize_worker, (repository, *validate_metrics(metrics))
+        max(workers, 1),
+        initialize,
+        (InitArgs(repository, validate_metrics(metrics)),),
     ) as pool:
-        results = (res for res in pool.imap(analyze_worker, ids) if res is not None)
+        results = (res for res in pool.imap(worker, ids) if res is not None)
         for result in results:
             echo(result)
 
@@ -136,9 +170,13 @@ def clone(
 
 
 @app.command()
-def branch(path: Path, local: bool = True, remote: bool = True) -> None:
+def branch(
+    repository: Path = Argument(..., help="The path to the bare repository."),
+    local: bool = True,
+    remote: bool = False,
+) -> None:
     """Get the branches of a repository."""
-    repo = Repository(path)
+    repo = Repository(repository)
     branches: Iterable[str]
     if local and remote:
         branches = repo.branches
@@ -148,73 +186,3 @@ def branch(path: Path, local: bool = True, remote: bool = True) -> None:
         branches = repo.branches.remote
     for branch_name in branches:
         echo(branch_name)
-
-
-@app.command()
-def to_csv() -> None:
-    """Format a JSONL input as CSV."""
-
-    results: Dict[str, List[Tuple[Any, ...]]] = {
-        "COMMITS": [],
-        "PARENTS": [],
-        "METRICS": [],
-        "BLOBS": [],
-        "BLOB_METRICS": [],
-        "UNITS": [],
-        "UNIT_METRICS": [],
-    }
-    for line in stdin:
-        d: CommitOutput = loads(line)
-        results["COMMITS"].append(
-            (
-                d["id"],
-                d["author"]["email"],
-                d["author"]["name"],
-                d["author"]["time"],
-                d["author"]["time_offset"],
-                d["commit_time"],
-                d["committer"]["email"],
-                d["committer"]["name"],
-                d["committer"]["time"],
-                d["committer"]["time_offset"],
-                d["message"],
-            )
-        )
-        for parent_id in d["parent_ids"]:
-            results["PARENTS"].append((d["id"], parent_id))
-        for metric in d["metrics"]:
-            results["METRICS"].append(
-                (
-                    d["id"],
-                    metric["name"],
-                    metric.get("value", None),
-                    metric.get("cached", False),
-                )
-            )
-        for blob in d["blobs"]:
-            results["BLOBS"].append((d["id"], blob["id"], blob["name"]))
-            for metric in blob["metrics"]:
-                results["BLOB_METRICS"].append(
-                    (
-                        blob["id"],
-                        metric["name"],
-                        metric.get("value", None),
-                        metric.get("cached", False),
-                    )
-                )
-            for unit in blob["units"]:
-                results["UNITS"].append((blob["id"], unit["id"]))
-                for metric in unit["metrics"]:
-                    results["UNIT_METRICS"].append(
-                        (
-                            blob["id"],
-                            unit["id"],
-                            metric["name"],
-                            metric.get("value", None),
-                            metric.get("cached", False),
-                        )
-                    )
-    for table_name, table in results.items():
-        echo(table_name)
-        for row in table:
-            echo(",".join(str(cell) for cell in row))
