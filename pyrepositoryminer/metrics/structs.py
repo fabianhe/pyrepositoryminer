@@ -1,6 +1,10 @@
 from typing import Any, NamedTuple, Optional
 
-from pyrepositoryminer.visitableobject import VisitableBlob, VisitableTree
+from pyrepositoryminer.visitableobject import (
+    VisitableBlob,
+    VisitableCommit,
+    VisitableTree,
+)
 
 
 class DirTuple(NamedTuple):
@@ -11,6 +15,7 @@ class DirTuple(NamedTuple):
 
 class TreeTuple(NamedTuple):
     tree: VisitableTree
+    commit: VisitableCommit
     is_cached: bool
 
 

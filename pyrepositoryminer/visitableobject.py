@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator, Sequence
 
 from pygit2 import Blob, Commit, Object, Tree
 
@@ -37,6 +37,10 @@ class VisitableObject:
 class VisitableCommit(VisitableObject):
     async def accept(self, treevisitor: "TreeVisitor") -> None:
         await treevisitor.visitCommit(self)
+
+    @property
+    def parents(self) -> Sequence[VisitableCommit]:
+        return tuple(VisitableCommit(parent) for parent in self.obj.parents)
 
     @property
     def tree(self) -> VisitableTree:

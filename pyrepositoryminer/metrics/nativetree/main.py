@@ -5,14 +5,24 @@ from pyrepositoryminer.metrics.structs import Metric, TreeTuple
 from pyrepositoryminer.metrics.visitor import TreeVisitor
 from pyrepositoryminer.visitableobject import (
     VisitableBlob,
+    VisitableCommit,
     VisitableObject,
     VisitableTree,
 )
 
 
 class NativeTreeVisitor(TreeVisitor):
+    async def visitCommit(self, commit: VisitableCommit) -> None:
+        if self.visited_commit:
+            return
+        self.visited_commit = True
+        self.commit = commit
+        await commit.tree.accept(self)
+
     async def visitTree(self, tree: VisitableTree) -> None:
-        self.tree: Optional[TreeTuple] = TreeTuple(tree, self.oid_is_cached(tree.id))
+        self.tree: Optional[TreeTuple] = TreeTuple(
+            tree, self.commit, self.oid_is_cached(tree.id)
+        )
         self.cache_oid(tree.id)
 
     async def visitBlob(self, blob: VisitableBlob) -> None:
