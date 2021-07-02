@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from tempfile import TemporaryDirectory
-from typing import Awaitable, Iterable, Optional, final
+from typing import Any, Awaitable, Iterable, Optional, final
 
 from pygit2 import Repository
 
@@ -33,26 +33,22 @@ class DirVisitor(TreeVisitor):
     async def visitBlob(self, blob: VisitableBlob) -> None:
         pass
 
-    async def __call__(self, visitable_object: VisitableObject) -> None:
+    async def __call__(self, visitable_object: VisitableObject) -> Optional[DirTuple]:
         self.visited_commit = False
         self.commit = None
         await visitable_object.accept(self)
-
-    async def __aenter__(self) -> "DirVisitor":
         if self.commit is None:
-            self.dir_tup: Optional[DirTuple] = None
-            return self
-        self.ref = self.repository.references.create(
+            return None
+        self.ref: Any = self.repository.references.create(
             f"refs/heads/{datetime.now().timestamp()}", self.commit.id
         )
-        self.tempdir = TemporaryDirectory()
+        self.tempdir: TemporaryDirectory[str] = TemporaryDirectory()
         self.wtname = f"wt_{self.commit.id}"
         path = f"{self.tempdir.name}/{self.wtname}"
-        self.worktree = self.repository.add_worktree(self.wtname, path, self.ref)
-        self.dir_tup = DirTuple(path=path, is_cached=False)
-        return self
+        self.worktree: Any = self.repository.add_worktree(self.wtname, path, self.ref)
+        return DirTuple(path=path, is_cached=False)
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore
+    async def close(self) -> None:
         self.worktree.prune(True)
         self.ref.delete()
         self.tempdir.cleanup()

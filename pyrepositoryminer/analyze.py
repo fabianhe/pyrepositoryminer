@@ -5,7 +5,7 @@ Global variables are accessed in the context of a worker.
 from asyncio import run
 from asyncio.tasks import as_completed
 from pathlib import Path
-from typing import Any, Awaitable, Iterable, NamedTuple, Optional, Tuple
+from typing import Any, Awaitable, Iterable, List, NamedTuple, Optional, Tuple
 
 from pygit2 import Commit, Repository
 from uvloop import install
@@ -67,18 +67,25 @@ async def analyze(commit_id: str) -> Optional[CommitOutput]:
         if commit is None or not isinstance(commit, Commit):
             return None
     root = VisitableObject.from_object(commit)
-    futures = [
-        m(blob_tup)
-        async for blob_tup in native_blob_visitor(root)
-        for m in native_blob_metrics
-        if not (await m.filter(blob_tup))
-    ]
-    tree_tup = await native_tree_visitor(root)
-    futures.extend(m(tree_tup) for m in native_tree_metrics)
-    await dir_visitor(root)
-    async with dir_visitor:
-        futures.extend(m(dir_visitor.dir_tup) for m in dir_metrics)
-        mets = await categorize_metrics(*futures)
+    futures: List[Awaitable[Iterable[Metric]]] = []
+    if native_blob_metrics:
+        futures.extend(
+            *[
+                m(blob_tup)
+                async for blob_tup in native_blob_visitor(root)
+                for m in native_blob_metrics
+                if not (await m.filter(blob_tup))
+            ]
+        )
+    if native_tree_metrics:
+        tree_tup = await native_tree_visitor(root)
+        futures.extend(m(tree_tup) for m in native_tree_metrics)
+    if dir_metrics:
+        dir_tup = await dir_visitor(root)
+        futures.extend(m(dir_tup) for m in dir_metrics)
+    mets = await categorize_metrics(*futures)
+    if dir_metrics:
+        await dir_visitor.close()
     return parse_commit(commit, *mets)
 
 
