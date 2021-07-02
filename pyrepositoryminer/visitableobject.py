@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Any, Iterator
 
 from pygit2 import Blob, Commit, Object, Tree
 
@@ -49,6 +49,9 @@ class VisitableTree(VisitableObject):
 
     def __iter__(self) -> Iterator[VisitableObject]:
         return (VisitableObject.from_object(obj) for obj in self.obj)
+
+    def __getitem__(self, item: Any) -> VisitableObject:
+        return VisitableObject.from_object(self.obj[item])
 
 
 class VisitableBlob(VisitableObject):

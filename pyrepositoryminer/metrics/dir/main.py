@@ -46,7 +46,7 @@ class DirVisitor(TreeVisitor):
         self.wtname = f"wt_{self.commit.id}"
         path = f"{self.tempdir.name}/{self.wtname}"
         self.worktree: Any = self.repository.add_worktree(self.wtname, path, self.ref)
-        return DirTuple(path=path, is_cached=False)
+        return DirTuple(path=path, tree=self.commit.tree, is_cached=False)
 
     async def close(self) -> None:
         self.worktree.prune(True)

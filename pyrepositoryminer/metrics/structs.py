@@ -5,6 +5,7 @@ from pyrepositoryminer.visitableobject import VisitableBlob, VisitableTree
 
 class DirTuple(NamedTuple):
     path: str
+    tree: VisitableTree
     is_cached: bool
 
 
