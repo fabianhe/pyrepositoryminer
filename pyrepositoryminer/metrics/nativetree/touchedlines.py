@@ -13,11 +13,21 @@ from pyrepositoryminer.metrics.structs import Metric, TreeTuple
 
 class TouchedLines(NativeTreeMetric):
     async def analyze(self, tree_tup: TreeTuple) -> Iterable[Metric]:
-        touched_lines = ""
-        for parent in tree_tup.commit.parents:
-            diff = tree_tup.tree.obj.diff_to_tree(parent.tree.obj)
-            for patch in diff:
-                for hunk in patch.hunks:
-                    for line in hunk.lines:
-                        touched_lines += line.content
+        parent_trees = tuple(parent.tree.obj for parent in tree_tup.commit.parents)
+        if not parent_trees:  # orphan commit is diffed to empty tree
+            diffs = [tree_tup.tree.obj.diff_to_tree(swap=True)]
+
+        else:
+            diffs = [
+                tree_tup.tree.obj.diff_to_tree(parent_tree, swap=True)
+                for parent_tree in parent_trees
+            ]
+        touched_lines = [
+            line.content
+            for diff in diffs
+            for patch in diff
+            for hunk in patch.hunks
+            for line in hunk.lines
+            if line.content_offset > -1
+        ]
         return [Metric(self.name, touched_lines, False)]
