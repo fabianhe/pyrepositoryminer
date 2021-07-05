@@ -18,6 +18,7 @@ from pygit2 import (
     clone_repository,
 )
 from typer import Abort, Argument, Option, Typer, echo
+from typer.models import FileText
 
 from pyrepositoryminer.analyze import InitArgs, initialize, worker
 from pyrepositoryminer.metrics import all_metrics
@@ -89,12 +90,9 @@ def iter_distinct(iterable: Iterable[T]) -> Iterable[T]:
 
 
 def validate_metrics(
-    metrics: Optional[List[AvailableMetrics]],
+    metrics: List[AvailableMetrics],
 ) -> Tuple[str, ...]:
-    distinct: Set[str] = (
-        set() if metrics is None else {metric.value for metric in metrics}
-    )
-    return tuple(sorted(distinct & all_metrics.keys()))
+    return tuple(sorted({metric.value for metric in metrics} & all_metrics.keys()))
 
 
 def generate_walkers(
@@ -160,26 +158,20 @@ def commits(
 @app.command()
 def analyze(
     repository: Path = Argument(..., help="The path to the bare repository."),
-    commits: Path = Argument(
-        "-",
-        allow_dash=True,
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        writable=False,
-        readable=True,
+    metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
+    commits: Optional[FileText] = Option(
+        None,
         help="The newline-separated input file of commit ids. Commit ids are read from stdin if this is not passed.",  # noqa: E501
     ),
-    metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
     custom_metrics: List[str] = Option([]),
     workers: int = 1,
 ) -> None:
     """Analyze commits of a repository.
 
     Either provide the commit ids to analyze on stdin or as a file argument."""
+    metrics = metrics if metrics else []
     c_metrics = tuple(map(import_metric, set(custom_metrics)))
-    f = stdin if commits == Path("-") else open(commits)
-    ids = (id.strip() for id in f)
+    ids = (id.strip() for id in (commits if commits else stdin))
     with Pool(
         max(workers, 1),
         initialize,
@@ -188,7 +180,6 @@ def analyze(
         results = (res for res in pool.imap(worker, ids) if res is not None)
         for result in results:
             echo(result)
-    f.close()
 
 
 @app.command()
