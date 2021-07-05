@@ -82,6 +82,7 @@ $ pyrepositoryminer clone [OPTIONS] URL PATH
 
 **Options**:
 
+* `--bare / --no-bare`: [default: True]
 * `--help`: Show this message and exit.
 
 ## `pyrepositoryminer commits`

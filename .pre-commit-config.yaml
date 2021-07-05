@@ -33,4 +33,4 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        entry: poetry run typer pyrepositoryminer.main utils docs --name pyrepositoryminer --output DOCS.md
+        entry: poetry run typer pyrepositoryminer utils docs --name pyrepositoryminer --output DOCS.md

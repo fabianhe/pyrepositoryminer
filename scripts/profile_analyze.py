@@ -4,7 +4,7 @@ from pstats import Stats
 
 from typer import FileText
 
-from pyrepositoryminer.main import AvailableMetrics, analyze
+from pyrepositoryminer.commands.analyze import AvailableMetrics, analyze
 
 
 def main() -> None:
