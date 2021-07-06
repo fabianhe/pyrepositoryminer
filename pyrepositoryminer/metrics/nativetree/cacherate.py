@@ -1,7 +1,7 @@
 from typing import Dict, Iterable, List, Set
 
 from pyrepositoryminer.metrics.nativetree.main import NativeTreeMetric
-from pyrepositoryminer.metrics.structs import Metric, TreeTuple
+from pyrepositoryminer.metrics.structs import Metric, NativeTreeMetricInput
 from pyrepositoryminer.visitableobject import (
     VisitableBlob,
     VisitableObject,
@@ -13,7 +13,7 @@ class CacheRate(NativeTreeMetric):
     def __init__(self) -> None:
         self.cache: Set[str] = set()
 
-    async def analyze(self, tree_tup: TreeTuple) -> Iterable[Metric]:
+    async def analyze(self, tree_tup: NativeTreeMetricInput) -> Iterable[Metric]:
         rate: Dict[str, Dict[bool, int]] = {
             "blobs": {True: 0, False: 0},
             "trees": {True: 0, False: 0},

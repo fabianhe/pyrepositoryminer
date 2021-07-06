@@ -1,7 +1,8 @@
-from abc import ABC, abstractmethod
-from typing import Awaitable, Iterable, Optional, final
+from abc import ABC
+from typing import Optional
 
-from pyrepositoryminer.metrics.structs import Metric, TreeTuple
+from pyrepositoryminer.metrics.main import BaseMetric
+from pyrepositoryminer.metrics.structs import NativeTreeMetricInput
 from pyrepositoryminer.metrics.visitor import TreeVisitor
 from pyrepositoryminer.visitableobject import (
     VisitableBlob,
@@ -20,37 +21,22 @@ class NativeTreeVisitor(TreeVisitor):
         await commit.tree.accept(self)
 
     async def visitTree(self, tree: VisitableTree) -> None:
-        self.tree: Optional[TreeTuple] = TreeTuple(
-            tree, self.commit, self.oid_is_cached(tree.id)
+        self.tree: Optional[NativeTreeMetricInput] = NativeTreeMetricInput(
+            self.oid_is_cached(tree.id), tree, self.commit
         )
         self.cache_oid(tree.id)
 
     async def visitBlob(self, blob: VisitableBlob) -> None:
         pass
 
-    async def __call__(self, visitable_object: VisitableObject) -> Optional[TreeTuple]:
+    async def __call__(
+        self, visitable_object: VisitableObject
+    ) -> Optional[NativeTreeMetricInput]:
         self.visited_commit = False
         self.tree = None
         await visitable_object.accept(self)
         return self.tree
 
 
-class NativeTreeMetric(ABC):
-    async def cache_hit(self, tree_tup: TreeTuple) -> Iterable[Metric]:
-        return await self.analyze(tree_tup)
-
-    @abstractmethod
-    def analyze(self, tree_tup: TreeTuple) -> Awaitable[Iterable[Metric]]:
-        pass
-
-    @final
-    async def __call__(self, tree_tup: TreeTuple) -> Iterable[Metric]:
-        if tree_tup.is_cached:
-            return await self.cache_hit(tree_tup)
-        else:
-            return await self.analyze(tree_tup)
-
-    @classmethod
-    @property
-    def name(cls) -> str:
-        return str(cls.__name__).lower()
+class NativeTreeMetric(BaseMetric[NativeTreeMetricInput], ABC):
+    pass

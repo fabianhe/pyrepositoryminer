@@ -70,7 +70,7 @@ async def analyze(commit_id: str) -> Optional[CommitOutput]:
     futures: List[Awaitable[Iterable[Metric]]] = []
     if native_blob_metrics:
         futures.extend(
-            *[
+            [
                 m(blob_tup)
                 async for blob_tup in native_blob_visitor(root)
                 for m in native_blob_metrics

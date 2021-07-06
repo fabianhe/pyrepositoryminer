@@ -1,11 +1,12 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from datetime import datetime
 from tempfile import TemporaryDirectory
-from typing import Any, Awaitable, Iterable, Optional, final
+from typing import Any, Optional
 
 from pygit2 import Repository
 
-from pyrepositoryminer.metrics.structs import DirTuple, Metric
+from pyrepositoryminer.metrics.main import BaseMetric
+from pyrepositoryminer.metrics.structs import DirMetricInput
 from pyrepositoryminer.metrics.visitor import TreeVisitor
 from pyrepositoryminer.visitableobject import (
     VisitableBlob,
@@ -33,7 +34,9 @@ class DirVisitor(TreeVisitor):
     async def visitBlob(self, blob: VisitableBlob) -> None:
         pass
 
-    async def __call__(self, visitable_object: VisitableObject) -> Optional[DirTuple]:
+    async def __call__(
+        self, visitable_object: VisitableObject
+    ) -> Optional[DirMetricInput]:
         self.visited_commit = False
         self.commit = None
         await visitable_object.accept(self)
@@ -46,7 +49,7 @@ class DirVisitor(TreeVisitor):
         self.wtname = f"wt_{self.commit.id}"
         path = f"{self.tempdir.name}/{self.wtname}"
         self.worktree: Any = self.repository.add_worktree(self.wtname, path, self.ref)
-        return DirTuple(path=path, tree=self.commit.tree, is_cached=False)
+        return DirMetricInput(False, path, self.commit.tree)
 
     async def close(self) -> None:
         self.worktree.prune(True)
@@ -54,22 +57,5 @@ class DirVisitor(TreeVisitor):
         self.tempdir.cleanup()
 
 
-class DirMetric(ABC):
-    async def cache_hit(self, dir_tup: DirTuple) -> Iterable[Metric]:
-        return await self.analyze(dir_tup)
-
-    @abstractmethod
-    def analyze(self, dir_tup: DirTuple) -> Awaitable[Iterable[Metric]]:
-        pass
-
-    @final
-    async def __call__(self, dir_tup: DirTuple) -> Iterable[Metric]:
-        if dir_tup.is_cached:
-            return await self.cache_hit(dir_tup)
-        else:
-            return await self.analyze(dir_tup)
-
-    @classmethod
-    @property
-    def name(cls) -> str:
-        return str(cls.__name__).lower()
+class DirMetric(BaseMetric[DirMetricInput], ABC):
+    pass

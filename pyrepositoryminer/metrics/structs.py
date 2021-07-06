@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any, NamedTuple, Optional
 
 from pyrepositoryminer.visitableobject import (
@@ -7,22 +8,27 @@ from pyrepositoryminer.visitableobject import (
 )
 
 
-class DirTuple(NamedTuple):
-    path: str
-    tree: VisitableTree
+@dataclass(frozen=True)
+class BaseMetricInput:
     is_cached: bool
 
 
-class TreeTuple(NamedTuple):
+@dataclass(frozen=True)
+class DirMetricInput(BaseMetricInput):
+    path: str
+    tree: VisitableTree
+
+
+@dataclass(frozen=True)
+class NativeTreeMetricInput(BaseMetricInput):
     tree: VisitableTree
     commit: VisitableCommit
-    is_cached: bool
 
 
-class BlobTuple(NamedTuple):
+@dataclass(frozen=True)
+class NativeBlobMetricInput(BaseMetricInput):
     path: str
     blob: VisitableBlob
-    is_cached: bool
 
 
 class ObjectIdentifier(NamedTuple):

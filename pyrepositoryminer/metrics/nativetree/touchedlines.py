@@ -1,7 +1,7 @@
 from typing import Iterable
 
 from pyrepositoryminer.metrics.nativetree.main import NativeTreeMetric
-from pyrepositoryminer.metrics.structs import Metric, TreeTuple
+from pyrepositoryminer.metrics.structs import Metric, NativeTreeMetricInput
 
 # optionally filter the files with
 # patch.delta.old_file or patch.delta.new_file
@@ -12,7 +12,7 @@ from pyrepositoryminer.metrics.structs import Metric, TreeTuple
 
 
 class TouchedLines(NativeTreeMetric):
-    async def analyze(self, tree_tup: TreeTuple) -> Iterable[Metric]:
+    async def analyze(self, tree_tup: NativeTreeMetricInput) -> Iterable[Metric]:
         parent_trees = tuple(parent.tree.obj for parent in tree_tup.commit.parents)
         if not parent_trees:  # orphan commit is diffed to empty tree
             diffs = [tree_tup.tree.obj.diff_to_tree(swap=True)]

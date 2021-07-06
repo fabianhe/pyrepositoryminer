@@ -1,7 +1,7 @@
 from typing import Iterable, List
 
 from pyrepositoryminer.metrics.nativetree.main import NativeTreeMetric
-from pyrepositoryminer.metrics.structs import Metric, TreeTuple
+from pyrepositoryminer.metrics.structs import Metric, NativeTreeMetricInput
 from pyrepositoryminer.visitableobject import (
     VisitableBlob,
     VisitableObject,
@@ -10,7 +10,7 @@ from pyrepositoryminer.visitableobject import (
 
 
 class Loc(NativeTreeMetric):
-    async def analyze(self, tree_tup: TreeTuple) -> Iterable[Metric]:
+    async def analyze(self, tree_tup: NativeTreeMetricInput) -> Iterable[Metric]:
         n = 0
         q: List[VisitableObject] = [tree_tup.tree]
         while q:

@@ -3,13 +3,17 @@ from typing import Iterable
 from radon.metrics import h_visit
 
 from pyrepositoryminer.metrics.nativeblob.main import NativeBlobFilter, NativeBlobMetric
-from pyrepositoryminer.metrics.structs import BlobTuple, Metric, ObjectIdentifier
+from pyrepositoryminer.metrics.structs import (
+    Metric,
+    NativeBlobMetricInput,
+    ObjectIdentifier,
+)
 
 
 class Halstead(NativeBlobMetric):
     filter = NativeBlobFilter(NativeBlobFilter.endswith(".py"))
 
-    async def cache_hit(self, blob_tup: BlobTuple) -> Iterable[Metric]:
+    async def cache_hit(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
         return [
             Metric(
                 self.name,
@@ -19,7 +23,7 @@ class Halstead(NativeBlobMetric):
             )
         ]
 
-    async def analyze(self, blob_tup: BlobTuple) -> Iterable[Metric]:
+    async def analyze(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
         try:
             h_data = h_visit(blob_tup.blob.data.decode())
         except (SyntaxError, UnicodeDecodeError):

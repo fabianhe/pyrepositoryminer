@@ -70,7 +70,7 @@ def commits(
         help="The newline-separated input file of branches to pull the commits from. Branches are read from stdin if this is not passed.",  # noqa: E501
     ),
     simplify_first_parent: bool = True,
-    drop_duplicates: bool = False,
+    drop_duplicates: bool = True,
     sort: Sort = Option(Sort.topological, case_sensitive=False),
     sort_reverse: bool = True,
     limit: Optional[int] = None,

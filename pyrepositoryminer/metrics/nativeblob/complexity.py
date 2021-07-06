@@ -3,13 +3,17 @@ from typing import Iterable
 from radon.complexity import cc_visit
 
 from pyrepositoryminer.metrics.nativeblob.main import NativeBlobFilter, NativeBlobMetric
-from pyrepositoryminer.metrics.structs import BlobTuple, Metric, ObjectIdentifier
+from pyrepositoryminer.metrics.structs import (
+    Metric,
+    NativeBlobMetricInput,
+    ObjectIdentifier,
+)
 
 
 class Complexity(NativeBlobMetric):
     filter = NativeBlobFilter(NativeBlobFilter.endswith(".py"))
 
-    async def cache_hit(self, blob_tup: BlobTuple) -> Iterable[Metric]:
+    async def cache_hit(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
         return [
             Metric(
                 self.name,
@@ -19,7 +23,7 @@ class Complexity(NativeBlobMetric):
             )
         ]
 
-    async def analyze(self, blob_tup: BlobTuple) -> Iterable[Metric]:
+    async def analyze(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
         try:
             cc_data = cc_visit(blob_tup.blob.data)
         except (SyntaxError, UnicodeDecodeError):

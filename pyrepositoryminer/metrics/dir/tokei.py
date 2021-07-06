@@ -4,7 +4,7 @@ from json import loads
 from typing import Iterable
 
 from pyrepositoryminer.metrics.dir.main import DirMetric
-from pyrepositoryminer.metrics.structs import DirTuple, Metric, ObjectIdentifier
+from pyrepositoryminer.metrics.structs import DirMetricInput, Metric, ObjectIdentifier
 from pyrepositoryminer.visitableobject import VisitableObject, VisitableTree
 
 
@@ -16,7 +16,7 @@ def descend_tree(tree: VisitableTree, obj_name: str) -> str:
 
 
 class Tokei(DirMetric):
-    async def analyze(self, dir_tup: DirTuple) -> Iterable[Metric]:
+    async def analyze(self, dir_tup: DirMetricInput) -> Iterable[Metric]:
         p = await create_subprocess_exec(
             "tokei", "--output", "json", dir_tup.path, stdout=PIPE
         )
