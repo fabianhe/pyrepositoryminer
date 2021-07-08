@@ -5,11 +5,11 @@ from typing import Iterable
 
 from pyrepositoryminer.metrics.dir.main import DirMetric
 from pyrepositoryminer.metrics.structs import DirMetricInput, Metric, ObjectIdentifier
-from pyrepositoryminer.visitableobject import VisitableObject, VisitableTree
+from pyrepositoryminer.pobjects import Object, Tree
 
 
-def descend_tree(tree: VisitableTree, obj_name: str) -> str:
-    item: VisitableObject = tree
+def descend_tree(tree: Tree, obj_name: str) -> str:
+    item: Object = tree
     for i in obj_name.split("/"):
         item = item[i]  # type: ignore
     return item.id

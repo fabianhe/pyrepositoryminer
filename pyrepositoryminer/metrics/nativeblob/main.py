@@ -1,75 +1,62 @@
 from abc import ABC, abstractmethod
-from asyncio import as_completed
-from typing import AsyncIterable, Awaitable, Callable, List, Set
+from typing import Callable, Iterable, List, Set, Tuple
 
-from pyrepositoryminer.metrics.main import BaseMetric
+from pyrepositoryminer.metrics.main import BaseMetric, BaseVisitor
 from pyrepositoryminer.metrics.structs import NativeBlobMetricInput
-from pyrepositoryminer.metrics.visitor import TreeVisitor
-from pyrepositoryminer.visitableobject import (
-    VisitableBlob,
-    VisitableObject,
-    VisitableTree,
-)
+from pyrepositoryminer.pobjects import Blob, Commit, Object, Tree
 
 
-class NativeBlobVisitor(TreeVisitor):
-    async def visitTree(self, tree: VisitableTree) -> None:
-        for visitable_object in tree:
-            self.path.append(visitable_object.name)
-            await visitable_object.accept(self)
-            self.path.pop(-1)
-
-    async def visitBlob(self, blob: VisitableBlob) -> None:
-        self.blobs.append(
-            NativeBlobMetricInput(self.oid_is_cached(blob.id), self.pathname, blob)
-        )
-        self.cache_oid(blob.id)
-
-    async def __call__(
-        self, visitable_object: VisitableObject
-    ) -> AsyncIterable[NativeBlobMetricInput]:
-        self.visited_commit = False
-        self.blobs: List[NativeBlobMetricInput] = []
-        await visitable_object.accept(self)
-        for blob in self.blobs:
-            yield blob
+class NativeBlobVisitor(BaseVisitor):
+    def __call__(self, visitable_object: Object) -> Iterable[NativeBlobMetricInput]:
+        visited_commit = False
+        q: List[Tuple[Object, str]] = [(visitable_object, "")]
+        while q:
+            vo, path = q.pop(0)
+            if isinstance(vo, Blob):
+                yield NativeBlobMetricInput(
+                    self.oid_is_cached(vo.id), f"{path}/{vo.name}", vo
+                )
+            elif isinstance(vo, Tree):
+                p = f"{f'{path}/' if path else ''}{vo.name if vo.name else ''}"
+                q.extend((sub_vo, p) for sub_vo in vo)
+            elif isinstance(vo, Commit) and not visited_commit:
+                q.append((vo.tree, ""))
+                visited_commit = False
+            self.cache_oid(vo.id)
 
 
 class NativeBlobFilter:
-    def __init__(
-        self, *filters: Callable[[NativeBlobMetricInput], Awaitable[bool]]
-    ) -> None:
+    def __init__(self, *filters: Callable[[NativeBlobMetricInput], bool]) -> None:
         self.filters = filters
         self.cached_oids: Set[str] = set()
 
-    async def __call__(self, tup: NativeBlobMetricInput) -> bool:
+    def __call__(self, tup: NativeBlobMetricInput) -> bool:
         if tup.is_cached:
             if tup.blob.id in self.cached_oids:
                 return True
         else:
-            for val in as_completed(tuple(filter(tup) for filter in self.filters)):
-                if await val:
-                    self.cached_oids.add(tup.blob.id)
-                    return True
+            if any(f(tup) for f in self.filters):
+                self.cached_oids.add(tup.blob.id)
+                return True
         return False
 
     @staticmethod
-    def endswith(ending: str) -> Callable[[NativeBlobMetricInput], Awaitable[bool]]:
-        async def filter(tup: NativeBlobMetricInput) -> bool:
+    def endswith(ending: str) -> Callable[[NativeBlobMetricInput], bool]:
+        def f(tup: NativeBlobMetricInput) -> bool:
             return not tup.blob.name.endswith(ending)
 
-        return filter
+        return f
 
     @staticmethod
-    def is_binary() -> Callable[[NativeBlobMetricInput], Awaitable[bool]]:
-        async def filter(tup: NativeBlobMetricInput) -> bool:
-            return tup.blob.is_binary
+    def is_binary() -> Callable[[NativeBlobMetricInput], bool]:
+        def f(tup: NativeBlobMetricInput) -> bool:
+            return bool(tup.blob.is_binary)
 
-        return filter
+        return f
 
 
 class NativeBlobMetric(BaseMetric[NativeBlobMetricInput], ABC):
     @staticmethod
     @abstractmethod
-    def filter(tup: NativeBlobMetricInput) -> Awaitable[bool]:
+    def filter(tup: NativeBlobMetricInput) -> bool:
         pass

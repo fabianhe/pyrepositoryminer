@@ -22,7 +22,7 @@ from pyrepositoryminer.metrics.nativetree.main import (
 )
 from pyrepositoryminer.metrics.structs import Metric
 from pyrepositoryminer.output import CommitOutput, format_output, parse_commit
-from pyrepositoryminer.visitableobject import VisitableObject
+from pyrepositoryminer.pobjects import Object
 
 
 class InitArgs(NamedTuple):
@@ -66,26 +66,24 @@ async def analyze(commit_id: str) -> Optional[CommitOutput]:
     else:
         if commit is None or not isinstance(commit, Commit):
             return None
-    root = VisitableObject.from_object(commit)
+    root = Object.from_pobject(commit)
     futures: List[Awaitable[Iterable[Metric]]] = []
     if native_blob_metrics:
         futures.extend(
-            [
-                m(blob_tup)
-                async for blob_tup in native_blob_visitor(root)
-                for m in native_blob_metrics
-                if not (await m.filter(blob_tup))
-            ]
+            m(blob_tup)
+            for blob_tup in native_blob_visitor(root)
+            for m in native_blob_metrics
+            if not m.filter(blob_tup)
         )
     if native_tree_metrics:
-        tree_tup = await native_tree_visitor(root)
+        tree_tup = native_tree_visitor(root)
         futures.extend(m(tree_tup) for m in native_tree_metrics)
     if dir_metrics:
-        dir_tup = await dir_visitor(root)
+        dir_tup = dir_visitor(root)
         futures.extend(m(dir_tup) for m in dir_metrics)
     mets = await categorize_metrics(*futures)
     if dir_metrics:
-        await dir_visitor.close()
+        dir_visitor.close()
     return parse_commit(commit, *mets)
 
 

@@ -1,7 +1,7 @@
 from pytest import mark
 from typer.testing import CliRunner
 
-from pyrepositoryminer.main import app
+from pyrepositoryminer import app
 
 runner = CliRunner()
 

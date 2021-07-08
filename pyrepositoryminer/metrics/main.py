@@ -1,7 +1,24 @@
 from abc import ABC, abstractmethod
-from typing import Awaitable, Generic, Iterable, TypeVar, final
+from typing import Any, Awaitable, Generic, Iterable, Set, TypeVar, final
 
 from pyrepositoryminer.metrics.structs import BaseMetricInput, Metric
+from pyrepositoryminer.pobjects import Object
+
+
+class BaseVisitor(ABC):
+    def __init__(self) -> None:
+        self.oid_cache: Set[str] = set()
+
+    def oid_is_cached(self, oid: str) -> bool:
+        return oid in self.oid_cache
+
+    def cache_oid(self, oid: str) -> None:
+        self.oid_cache.add(oid)
+
+    @abstractmethod
+    def __call__(self, visitable_object: Object) -> Any:
+        pass
+
 
 T = TypeVar("T", bound=BaseMetricInput)
 

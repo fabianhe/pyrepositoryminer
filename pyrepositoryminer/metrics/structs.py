@@ -1,11 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, NamedTuple, Optional
 
-from pyrepositoryminer.visitableobject import (
-    VisitableBlob,
-    VisitableCommit,
-    VisitableTree,
-)
+from pyrepositoryminer.pobjects import Blob, Commit, Tree
 
 
 @dataclass(frozen=True)
@@ -16,19 +12,19 @@ class BaseMetricInput:
 @dataclass(frozen=True)
 class DirMetricInput(BaseMetricInput):
     path: str
-    tree: VisitableTree
+    tree: Tree
 
 
 @dataclass(frozen=True)
 class NativeTreeMetricInput(BaseMetricInput):
-    tree: VisitableTree
-    commit: VisitableCommit
+    tree: Tree
+    commit: Commit
 
 
 @dataclass(frozen=True)
 class NativeBlobMetricInput(BaseMetricInput):
     path: str
-    blob: VisitableBlob
+    blob: Blob
 
 
 class ObjectIdentifier(NamedTuple):
