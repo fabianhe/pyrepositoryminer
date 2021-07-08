@@ -34,3 +34,12 @@ repos:
         pass_filenames: false
         always_run: true
         entry: poetry run typer pyrepositoryminer utils docs --name pyrepositoryminer --output DOCS.md
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [push]
