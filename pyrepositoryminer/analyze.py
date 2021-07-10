@@ -11,6 +11,7 @@ from pygit2 import Commit, Repository
 from uvloop import install
 
 from pyrepositoryminer.metrics import all_metrics
+from pyrepositoryminer.metrics.diffdir.main import DiffDirMetric, DiffDirVisitor
 from pyrepositoryminer.metrics.dir.main import DirMetric, DirVisitor
 from pyrepositoryminer.metrics.nativeblob.main import (
     NativeBlobMetric,
@@ -38,6 +39,8 @@ native_tree_metrics: Tuple[Any, ...]
 native_tree_visitor: NativeTreeVisitor
 dir_metrics: Tuple[Any, ...]
 dir_visitor: DirVisitor
+diffdir_visitor: DiffDirVisitor
+diffdir_metrics: Tuple[Any, ...]
 
 
 async def categorize_metrics(
@@ -81,9 +84,14 @@ async def analyze(commit_id: str) -> Optional[CommitOutput]:
     if dir_metrics:
         dir_tup = dir_visitor(root)
         futures.extend(m(dir_tup) for m in dir_metrics)
+    if diffdir_metrics:
+        diffdir_tup = diffdir_visitor(root)
+        futures.extend(m(diffdir_tup) for m in diffdir_metrics)
     mets = await categorize_metrics(*futures)
     if dir_metrics:
         dir_visitor.close()
+    if diffdir_metrics:
+        diffdir_visitor.close()
     return parse_commit(commit, *mets)
 
 
@@ -93,6 +101,7 @@ def initialize(init_args: InitArgs) -> None:
     global native_blob_metrics, native_blob_visitor
     global native_tree_metrics, native_tree_visitor
     global dir_metrics, dir_visitor
+    global diffdir_metrics, diffdir_visitor
     repo = Repository(init_args.repository)
     native_blob_metrics = tuple(
         [
@@ -121,6 +130,15 @@ def initialize(init_args: InitArgs) -> None:
         + [m() for m in init_args.custom_metrics if issubclass(m, DirMetric)]
     )
     dir_visitor = DirVisitor(repo)
+    diffdir_metrics = tuple(
+        [
+            all_metrics[m]()
+            for m in init_args.metrics
+            if issubclass(all_metrics[m], DiffDirMetric)
+        ]
+        + [m() for m in init_args.custom_metrics if issubclass(m, DiffDirMetric)]
+    )
+    diffdir_visitor = DiffDirVisitor(repo)
 
 
 def worker(commit_id: str) -> Optional[str]:
