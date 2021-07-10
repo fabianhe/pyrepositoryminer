@@ -30,13 +30,13 @@ Either provide the commit ids to analyze on stdin or as a file argument.
 **Usage**:
 
 ```console
-$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[blobcount|cacherate|complexity|difftokei|halstead|linecount|linelength|loc|maintainability|nesting|pylinecount|raw|tokei|touchedlines]...
+$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[blobcount|cacherate|complexity|difftokei|halstead|linecount|linelength|loc|maintainability|nesting|pylinecount|raw|seerene|tokei|touchedlines]...
 ```
 
 **Arguments**:
 
 * `REPOSITORY`: The path to the bare repository.  [required]
-* `[METRICS]:[blobcount|cacherate|complexity|difftokei|halstead|linecount|linelength|loc|maintainability|nesting|pylinecount|raw|tokei|touchedlines]...`
+* `[METRICS]:[blobcount|cacherate|complexity|difftokei|halstead|linecount|linelength|loc|maintainability|nesting|pylinecount|raw|seerene|tokei|touchedlines]...`
 
 **Options**:
 
