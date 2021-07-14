@@ -1,15 +1,28 @@
 from abc import ABC
 from tempfile import TemporaryDirectory
-from typing import Optional
+from typing import FrozenSet, Optional
 
 from pygit2 import GIT_CHECKOUT_FORCE, Repository
+from pygit2._pygit2 import DiffFile
 
 from pyrepositoryminer.metrics.main import BaseMetric, BaseVisitor
 from pyrepositoryminer.metrics.structs import DirMetricInput
 from pyrepositoryminer.pobjects import Commit, Object
 
 
-class DirVisitor(BaseVisitor):
+def get_touchedfiles(commit: Commit) -> FrozenSet[DiffFile]:
+    if not commit.parents:
+        return frozenset(
+            delta.new_file for delta in commit.tree.obj.diff_to_tree(swap=True).deltas
+        )
+    return frozenset(
+        delta.new_file
+        for parent in commit.parents
+        for delta in commit.tree.obj.diff_to_tree(parent.tree.obj, swap=True).deltas
+    )
+
+
+class DiffDirVisitor(BaseVisitor):
     def __init__(self, repository: Repository, base_dir: Optional[str] = None) -> None:
         super().__init__()
         self.repository = repository
@@ -22,6 +35,7 @@ class DirVisitor(BaseVisitor):
         self.repository.checkout_tree(
             visitable_object.tree.obj,
             directory=self.tempdir.name,
+            paths=[file.path for file in get_touchedfiles(visitable_object)],
             strategy=GIT_CHECKOUT_FORCE,
         )
         is_cached = self.oid_is_cached(visitable_object.tree.id)
@@ -32,5 +46,5 @@ class DirVisitor(BaseVisitor):
         self.tempdir.cleanup()
 
 
-class DirMetric(BaseMetric[DirMetricInput], ABC):
+class DiffDirMetric(BaseMetric[DirMetricInput], ABC):
     pass

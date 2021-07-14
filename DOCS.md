@@ -30,17 +30,18 @@ Either provide the commit ids to analyze on stdin or as a file argument.
 **Usage**:
 
 ```console
-$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [COMMITS] [METRICS]:[blobcount|complexity|halstead|linecount|linelength|loc|maintainability|nesting|pylinecount|raw|tokei]...
+$ pyrepositoryminer analyze [OPTIONS] REPOSITORY [METRICS]:[blobcount|cacherate|complexity|difftokei|halstead|linecount|linelength|loc|maintainability|nesting|pylinecount|raw|seerene|tokei|touchedlines]...
 ```
 
 **Arguments**:
 
 * `REPOSITORY`: The path to the bare repository.  [required]
-* `[COMMITS]`: The newline-separated input file of commit ids. Commit ids are read from stdin if this is not passed.  [default: -]
-* `[METRICS]:[blobcount|complexity|halstead|linecount|linelength|loc|maintainability|nesting|pylinecount|raw|tokei]...`
+* `[METRICS]:[blobcount|cacherate|complexity|difftokei|halstead|linecount|linelength|loc|maintainability|nesting|pylinecount|raw|seerene|tokei|touchedlines]...`
 
 **Options**:
 
+* `--commits FILENAME`: The newline-separated input file of commit ids. Commit ids are read from stdin if this is not passed.
+* `--custom-metrics TEXT`: [default: ]
 * `--workers INTEGER`: [default: 1]
 * `--help`: Show this message and exit.
 
@@ -81,6 +82,7 @@ $ pyrepositoryminer clone [OPTIONS] URL PATH
 
 **Options**:
 
+* `--bare / --no-bare`: [default: True]
 * `--help`: Show this message and exit.
 
 ## `pyrepositoryminer commits`
@@ -103,7 +105,7 @@ $ pyrepositoryminer commits [OPTIONS] REPOSITORY [BRANCHES]
 **Options**:
 
 * `--simplify-first-parent / --no-simplify-first-parent`: [default: True]
-* `--drop-duplicates / --no-drop-duplicates`: [default: False]
+* `--drop-duplicates / --no-drop-duplicates`: [default: True]
 * `--sort [topological|time|none]`: [default: topological]
 * `--sort-reverse / --no-sort-reverse`: [default: True]
 * `--limit INTEGER`

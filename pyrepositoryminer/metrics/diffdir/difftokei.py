@@ -1,21 +1,19 @@
 from asyncio import create_subprocess_exec
 from asyncio.subprocess import PIPE
+from functools import reduce
 from json import loads
 from typing import Iterable
 
-from pyrepositoryminer.metrics.dir.main import DirMetric
+from pyrepositoryminer.metrics.diffdir.main import DiffDirMetric
 from pyrepositoryminer.metrics.structs import DirMetricInput, Metric, ObjectIdentifier
-from pyrepositoryminer.pobjects import Object, Tree
+from pyrepositoryminer.pobjects import Tree
 
 
 def descend_tree(tree: Tree, obj_name: str) -> str:
-    item: Object = tree
-    for i in obj_name.split("/"):
-        item = item[i]  # type: ignore
-    return item.id
+    return reduce(lambda a, b: a[b], obj_name.split("/"), tree).id  # type: ignore
 
 
-class Tokei(DirMetric):
+class DiffTokei(DiffDirMetric):
     async def analyze(self, dir_tup: DirMetricInput) -> Iterable[Metric]:
         p = await create_subprocess_exec(
             "tokei", "--output", "json", dir_tup.path, stdout=PIPE

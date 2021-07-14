@@ -1,13 +1,17 @@
 from typing import Iterable
 
 from pyrepositoryminer.metrics.nativeblob.main import NativeBlobFilter, NativeBlobMetric
-from pyrepositoryminer.metrics.structs import BlobTuple, Metric, ObjectIdentifier
+from pyrepositoryminer.metrics.structs import (
+    Metric,
+    NativeBlobMetricInput,
+    ObjectIdentifier,
+)
 
 
 class Linelength(NativeBlobMetric):
     filter = NativeBlobFilter(NativeBlobFilter.is_binary())
 
-    async def cache_hit(self, blob_tup: BlobTuple) -> Iterable[Metric]:
+    async def cache_hit(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
         return [
             Metric(
                 self.name,
@@ -17,7 +21,7 @@ class Linelength(NativeBlobMetric):
             )
         ]
 
-    async def analyze(self, blob_tup: BlobTuple) -> Iterable[Metric]:
+    async def analyze(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
         result = [
             Metric(
                 self.name,

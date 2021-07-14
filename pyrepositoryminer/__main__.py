@@ -1,3 +1,3 @@
-from pyrepositoryminer.main import app
+from pyrepositoryminer import app
 
 app(prog_name="pyrepositoryminer")

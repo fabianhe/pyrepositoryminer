@@ -3,13 +3,17 @@ from asyncio.subprocess import PIPE
 from typing import Iterable
 
 from pyrepositoryminer.metrics.nativeblob.main import NativeBlobFilter, NativeBlobMetric
-from pyrepositoryminer.metrics.structs import BlobTuple, Metric, ObjectIdentifier
+from pyrepositoryminer.metrics.structs import (
+    Metric,
+    NativeBlobMetricInput,
+    ObjectIdentifier,
+)
 
 
 class Linecount(NativeBlobMetric):
     filter = NativeBlobFilter(NativeBlobFilter.is_binary())
 
-    async def cache_hit(self, blob_tup: BlobTuple) -> Iterable[Metric]:
+    async def cache_hit(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
         return [
             Metric(
                 self.name,
@@ -19,7 +23,7 @@ class Linecount(NativeBlobMetric):
             )
         ]
 
-    async def analyze(self, blob_tup: BlobTuple) -> Iterable[Metric]:
+    async def analyze(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
         p = await create_subprocess_exec("wc", "-l", stdin=PIPE, stdout=PIPE)
         stdout, _ = await p.communicate(blob_tup.blob.data)
         result = [
