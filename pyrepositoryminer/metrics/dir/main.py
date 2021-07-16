@@ -14,11 +14,14 @@ class DirVisitor(BaseVisitor):
         super().__init__()
         self.repository = repository
         self.base_dir = base_dir
+        self.tempdir: Optional[TemporaryDirectory[str]] = None
 
     def __call__(self, visitable_object: Object) -> Optional[DirMetricInput]:
         if not isinstance(visitable_object, Commit):
             return None
-        self.tempdir: TemporaryDirectory[str] = TemporaryDirectory(dir=self.base_dir)
+        self.tempdir = TemporaryDirectory(  # pylint: disable=consider-using-with
+            dir=self.base_dir
+        )
         self.repository.checkout_tree(
             visitable_object.tree.obj,
             directory=self.tempdir.name,
@@ -29,7 +32,8 @@ class DirVisitor(BaseVisitor):
         return DirMetricInput(is_cached, self.tempdir.name, visitable_object.tree)
 
     def close(self) -> None:
-        self.tempdir.cleanup()
+        if self.tempdir is not None:
+            self.tempdir.cleanup()
 
 
 class DirMetric(BaseMetric[DirMetricInput], ABC):

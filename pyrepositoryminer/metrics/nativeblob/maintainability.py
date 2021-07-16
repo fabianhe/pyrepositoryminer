@@ -13,19 +13,19 @@ from pyrepositoryminer.metrics.structs import (
 class Maintainability(NativeBlobMetric):
     filter = NativeBlobFilter(NativeBlobFilter.endswith(".py"))
 
-    async def cache_hit(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
+    async def cache_hit(self, tup: NativeBlobMetricInput) -> Iterable[Metric]:
         return [
             Metric(
                 self.name,
                 None,
                 True,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
+                ObjectIdentifier(tup.blob.id, tup.path),
             )
         ]
 
-    async def analyze(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
+    async def analyze(self, tup: NativeBlobMetricInput) -> Iterable[Metric]:
         try:
-            mi_data = mi_visit(blob_tup.blob.data.decode(), multi=True)
+            mi_data = mi_visit(tup.blob.data.decode(), multi=True)
         except (SyntaxError, UnicodeDecodeError):
             return []  # TODO get an error output?
         result = [
@@ -33,7 +33,7 @@ class Maintainability(NativeBlobMetric):
                 self.name,
                 float(mi_data),
                 False,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
+                ObjectIdentifier(tup.blob.id, tup.path),
             )
         ]
         return result

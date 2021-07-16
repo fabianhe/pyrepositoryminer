@@ -11,11 +11,11 @@ from pygit2 import Tree as pTree
 class Object:
     @classmethod
     def from_pobject(cls, obj: pObject) -> Object:
+        if isinstance(obj, pBlob):
+            return Blob(obj)
         if isinstance(obj, pTree):
             return Tree(obj)
-        elif isinstance(obj, pBlob):
-            return Blob(obj)
-        elif isinstance(obj, pCommit):
+        if isinstance(obj, pCommit):
             return Commit(obj)
         return Object(obj)
 

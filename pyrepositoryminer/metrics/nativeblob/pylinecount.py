@@ -11,23 +11,23 @@ from pyrepositoryminer.metrics.structs import (
 class Pylinecount(NativeBlobMetric):
     filter = NativeBlobFilter(NativeBlobFilter.is_binary())
 
-    async def cache_hit(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
+    async def cache_hit(self, tup: NativeBlobMetricInput) -> Iterable[Metric]:
         return [
             Metric(
                 self.name,
                 None,
                 True,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
+                ObjectIdentifier(tup.blob.id, tup.path),
             )
         ]
 
-    async def analyze(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
+    async def analyze(self, tup: NativeBlobMetricInput) -> Iterable[Metric]:
         result = [
             Metric(
                 self.name,
-                blob_tup.blob.obj.data.count(b"\n") + 1,
+                tup.blob.obj.data.count(b"\n") + 1,
                 False,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
+                ObjectIdentifier(tup.blob.id, tup.path),
             )
         ]
         return result

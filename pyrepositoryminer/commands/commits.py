@@ -22,6 +22,7 @@ class Sort(str, Enum):
 
     def __init__(self, name: str) -> None:
         self.sort_name = name
+        super().__init__()
 
     @property
     def flag(self):  # type: ignore
@@ -67,7 +68,7 @@ def commits(
         dir_okay=False,
         writable=False,
         readable=True,
-        help="The newline-separated input file of branches to pull the commits from. Branches are read from stdin if this is not passed.",  # noqa: E501
+        help="The newline-separated input file of branches to pull the commits from. Branches are read from stdin if this is not passed.",  # pylint: disable=line-too-long
     ),
     simplify_first_parent: bool = True,
     drop_duplicates: bool = True,
@@ -77,11 +78,11 @@ def commits(
 ) -> None:
     """Get the commit ids of a repository.
 
-    Either provide the branches to get the commit ids from on stdin or as a file argument."""  # noqa: E501
+    Either provide the branches to get the commit ids from on stdin or as a file argument."""  # pylint: disable=line-too-long
     branch_names: Iterable[str]
     if branches != Path("-"):
         with open(branches) as f:
-            branch_names = [line for line in f]
+            branch_names = list(f)
     else:
         branch_names = (line for line in stdin)
     branch_names = (branch.strip() for branch in branch_names)

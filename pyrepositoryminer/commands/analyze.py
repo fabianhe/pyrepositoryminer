@@ -34,12 +34,12 @@ def import_metric(import_str: str):  # type: ignore  # TODO make this a metric a
         if e.name != module_str:
             raise e from None
         echo(f'Could not import module "{module_str}"')
-        raise Abort()
+        raise Abort() from e
     try:
         instance = reduce(getattr, (module, *attrs_str.split(".")))  # type: ignore
-    except AttributeError:
+    except AttributeError as e:
         print(f'Attribute "{attrs_str}" not found in module "{module_str}"')
-        raise Abort()
+        raise Abort() from e
     if not isclass(instance):
         print(f'Instance "{instance}" must be a class')
         raise Abort()
@@ -55,7 +55,7 @@ def analyze(
     metrics: Optional[List[AvailableMetrics]] = Argument(None, case_sensitive=False),
     commits: Optional[FileText] = Option(
         None,
-        help="The newline-separated input file of commit ids. Commit ids are read from stdin if this is not passed.",  # noqa: E501
+        help="The newline-separated input file of commit ids. Commit ids are read from stdin if this is not passed.",  # pylint: disable=line-too-long
     ),
     custom_metrics: List[str] = Option([]),
     workers: int = 1,
@@ -64,7 +64,10 @@ def analyze(
 
     Either provide the commit ids to analyze on stdin or as a file argument."""
     metrics = metrics if metrics else []
-    ids = (id.strip() for id in (commits if commits else stdin))
+    ids = (
+        id.strip()
+        for id in (commits if commits else stdin)  # pylint: disable=superfluous-parens
+    )
     with Pool(
         max(workers, 1),
         initialize,

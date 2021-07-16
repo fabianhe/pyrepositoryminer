@@ -14,9 +14,9 @@ def descend_tree(tree: Tree, obj_name: str) -> str:
 
 
 class DiffTokei(DiffDirMetric):
-    async def analyze(self, dir_tup: DirMetricInput) -> Iterable[Metric]:
+    async def analyze(self, tup: DirMetricInput) -> Iterable[Metric]:
         p = await create_subprocess_exec(
-            "tokei", "--output", "json", dir_tup.path, stdout=PIPE
+            "tokei", "--output", "json", tup.path, stdout=PIPE
         )
         stdout, _ = await p.communicate()
         data = loads(bytes(stdout).decode("utf-8"))
@@ -31,8 +31,8 @@ class DiffTokei(DiffDirMetric):
                 },
                 False,
                 ObjectIdentifier(
-                    descend_tree(dir_tup.tree, report["name"][len(dir_tup.path) + 1 :]),
-                    report["name"][len(dir_tup.path) + 1 :],
+                    descend_tree(tup.tree, report["name"][len(tup.path) + 1 :]),
+                    report["name"][len(tup.path) + 1 :],
                 ),
             )
             for category_name, reports in data["Total"]["children"].items()

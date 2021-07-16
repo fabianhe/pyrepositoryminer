@@ -32,6 +32,7 @@ class InitArgs(NamedTuple):
     custom_metrics: Tuple[Any, ...]  # TODO make this a metric abc
 
 
+# pylint: disable=global-statement
 repo: Repository
 native_blob_metrics: Tuple[Any, ...]
 native_blob_visitor: NativeBlobVisitor

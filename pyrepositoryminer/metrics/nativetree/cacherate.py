@@ -9,13 +9,13 @@ class CacheRate(NativeTreeMetric):
     def __init__(self) -> None:
         self.cache: Set[str] = set()
 
-    async def analyze(self, tree_tup: NativeTreeMetricInput) -> Iterable[Metric]:
+    async def analyze(self, tup: NativeTreeMetricInput) -> Iterable[Metric]:
         rate: Dict[str, Dict[bool, int]] = {
             "blobs": {True: 0, False: 0},
             "trees": {True: 0, False: 0},
             "other": {True: 0, False: 0},
         }
-        q: List[Object] = [tree_tup.tree]
+        q: List[Object] = [tup.tree]
         while q:
             obj = q.pop(0)
             is_cached = obj.id in self.cache
