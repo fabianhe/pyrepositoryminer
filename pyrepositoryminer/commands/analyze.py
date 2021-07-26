@@ -12,6 +12,8 @@ from typer.models import FileText
 
 from pyrepositoryminer.analyze import InitArgs, initialize, worker
 from pyrepositoryminer.metrics import all_metrics
+from pyrepositoryminer.metrics.diffblob.main import DiffBlobMetric
+from pyrepositoryminer.metrics.diffdir.main import DiffDirMetric
 from pyrepositoryminer.metrics.dir.main import DirMetric
 from pyrepositoryminer.metrics.nativeblob.main import NativeBlobMetric
 from pyrepositoryminer.metrics.nativetree.main import NativeTreeMetric
@@ -43,7 +45,13 @@ def import_metric(import_str: str):  # type: ignore  # TODO make this a metric a
     if not isclass(instance):
         print(f'Instance "{instance}" must be a class')
         raise Abort()
-    parents = (NativeBlobMetric, NativeTreeMetric, DirMetric)
+    parents = (
+        NativeBlobMetric,
+        DiffBlobMetric,
+        NativeTreeMetric,
+        DirMetric,
+        DiffDirMetric,
+    )
     if not any(issubclass(instance, parent) for parent in parents):  # type: ignore
         print(f'Instance "{instance}" must subclass a pyrepositoryminer metric class')
         raise Abort()

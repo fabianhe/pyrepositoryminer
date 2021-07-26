@@ -11,6 +11,7 @@ from pygit2 import Commit, Repository
 from uvloop import install
 
 from pyrepositoryminer.metrics import all_metrics
+from pyrepositoryminer.metrics.diffblob.main import DiffBlobMetric, DiffBlobVisitor
 from pyrepositoryminer.metrics.diffdir.main import DiffDirMetric, DiffDirVisitor
 from pyrepositoryminer.metrics.dir.main import DirMetric, DirVisitor
 from pyrepositoryminer.metrics.nativeblob.main import (
@@ -36,6 +37,8 @@ class InitArgs(NamedTuple):
 repo: Repository
 native_blob_metrics: Tuple[Any, ...]
 native_blob_visitor: NativeBlobVisitor
+diff_blob_metrics: Tuple[Any, ...]
+diff_blob_visitor: DiffBlobVisitor
 native_tree_metrics: Tuple[Any, ...]
 native_tree_visitor: NativeTreeVisitor
 dir_metrics: Tuple[Any, ...]
@@ -62,7 +65,6 @@ async def categorize_metrics(
 
 
 async def analyze(commit_id: str) -> Optional[CommitOutput]:
-    global repo, native_blob_metrics
     try:
         commit = repo.get(commit_id)
     except ValueError:
@@ -77,6 +79,13 @@ async def analyze(commit_id: str) -> Optional[CommitOutput]:
             m(blob_tup)
             for blob_tup in native_blob_visitor(root)
             for m in native_blob_metrics
+            if not m.filter(blob_tup)
+        )
+    if diff_blob_metrics:
+        futures.extend(
+            m(blob_tup)
+            for blob_tup in diff_blob_visitor(root)
+            for m in diff_blob_metrics
             if not m.filter(blob_tup)
         )
     if native_tree_metrics:
@@ -100,45 +109,31 @@ def initialize(init_args: InitArgs) -> None:
     install()
     global repo
     global native_blob_metrics, native_blob_visitor
+    global diff_blob_metrics, diff_blob_visitor
     global native_tree_metrics, native_tree_visitor
     global dir_metrics, dir_visitor
     global diffdir_metrics, diffdir_visitor
+
+    def get_metrics(superclass) -> Tuple:  # type: ignore
+        return tuple(
+            [
+                all_metrics[m]()
+                for m in init_args.metrics
+                if issubclass(all_metrics[m], superclass)
+            ]
+            + [m() for m in init_args.custom_metrics if issubclass(m, superclass)]
+        )
+
     repo = Repository(init_args.repository)
-    native_blob_metrics = tuple(
-        [
-            all_metrics[m]()
-            for m in init_args.metrics
-            if issubclass(all_metrics[m], NativeBlobMetric)
-        ]
-        + [m() for m in init_args.custom_metrics if issubclass(m, NativeBlobMetric)]
-    )
+    native_blob_metrics = get_metrics(NativeBlobMetric)
     native_blob_visitor = NativeBlobVisitor()
-    native_tree_metrics = tuple(
-        [
-            all_metrics[m]()
-            for m in init_args.metrics
-            if issubclass(all_metrics[m], NativeTreeMetric)
-        ]
-        + [m() for m in init_args.custom_metrics if issubclass(m, NativeTreeMetric)]
-    )
+    diff_blob_metrics = get_metrics(DiffBlobMetric)
+    diff_blob_visitor = DiffBlobVisitor(repo)
+    native_tree_metrics = get_metrics(NativeTreeMetric)
     native_tree_visitor = NativeTreeVisitor()
-    dir_metrics = tuple(
-        [
-            all_metrics[m]()
-            for m in init_args.metrics
-            if issubclass(all_metrics[m], DirMetric)
-        ]
-        + [m() for m in init_args.custom_metrics if issubclass(m, DirMetric)]
-    )
+    dir_metrics = get_metrics(DirMetric)
     dir_visitor = DirVisitor(repo)
-    diffdir_metrics = tuple(
-        [
-            all_metrics[m]()
-            for m in init_args.metrics
-            if issubclass(all_metrics[m], DiffDirMetric)
-        ]
-        + [m() for m in init_args.custom_metrics if issubclass(m, DiffDirMetric)]
-    )
+    diffdir_metrics = get_metrics(DiffDirMetric)
     diffdir_visitor = DiffDirVisitor(repo)
 
 

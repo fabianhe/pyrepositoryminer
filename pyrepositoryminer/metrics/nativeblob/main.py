@@ -12,21 +12,22 @@ from pyrepositoryminer.pobjects import Blob, Commit, Object, Tree
 
 class NativeBlobVisitor(BaseVisitor):
     def __call__(self, visitable_object: Object) -> Iterable[NativeBlobMetricInput]:
-        visited_commit = False
-        q: List[Tuple[Object, str]] = [(visitable_object, "")]
-        while q:
-            vo, path = q.pop(0)
-            if isinstance(vo, Blob):
-                yield NativeBlobMetricInput(
-                    self.oid_is_cached(vo.id), f"{path}/{vo.name}", vo
-                )
-            elif isinstance(vo, Tree):
-                p = f"{f'{path}/' if path else ''}{vo.name if vo.name else ''}"
-                q.extend((sub_vo, p) for sub_vo in vo)
-            elif isinstance(vo, Commit) and not visited_commit:
-                q.append((vo.tree, ""))
-                visited_commit = False
-            self.cache_oid(vo.id)
+        if isinstance(visitable_object, Commit):
+            visited_commit = False
+            q: List[Tuple[Object, str]] = [(visitable_object, "")]
+            while q:
+                vo, path = q.pop(0)
+                if isinstance(vo, Blob):
+                    yield NativeBlobMetricInput(
+                        self.oid_is_cached(vo.id), f"{path}/{vo.name}", vo
+                    )
+                elif isinstance(vo, Tree):
+                    p = f"{f'{path}/' if path else ''}{vo.name if vo.name else ''}"
+                    q.extend((sub_vo, p) for sub_vo in vo)
+                elif isinstance(vo, Commit) and not visited_commit:
+                    q.append((vo.tree, ""))
+                    visited_commit = True
+                self.cache_oid(vo.id)
 
 
 class NativeBlobFilter:
