@@ -2,7 +2,11 @@ from abc import ABC, abstractmethod
 from typing import Callable, Iterable, List, Set, Tuple
 
 from pyrepositoryminer.metrics.main import BaseMetric, BaseVisitor
-from pyrepositoryminer.metrics.structs import NativeBlobMetricInput
+from pyrepositoryminer.metrics.structs import (
+    Metric,
+    NativeBlobMetricInput,
+    ObjectIdentifier,
+)
 from pyrepositoryminer.pobjects import Blob, Commit, Object, Tree
 
 
@@ -56,6 +60,16 @@ class NativeBlobFilter:
 
 
 class NativeBlobMetric(BaseMetric[NativeBlobMetricInput], ABC):
+    async def cache_hit(self, tup: NativeBlobMetricInput) -> Iterable[Metric]:
+        return [
+            Metric(
+                self.name,
+                None,
+                True,
+                ObjectIdentifier(tup.blob.id, tup.path),
+            )
+        ]
+
     @staticmethod
     @abstractmethod
     def filter(tup: NativeBlobMetricInput) -> bool:

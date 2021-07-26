@@ -13,16 +13,6 @@ from pyrepositoryminer.metrics.structs import (
 class Linecount(NativeBlobMetric):
     filter = NativeBlobFilter(NativeBlobFilter.is_binary())
 
-    async def cache_hit(self, tup: NativeBlobMetricInput) -> Iterable[Metric]:
-        return [
-            Metric(
-                self.name,
-                None,
-                True,
-                ObjectIdentifier(tup.blob.id, tup.path),
-            )
-        ]
-
     async def analyze(self, tup: NativeBlobMetricInput) -> Iterable[Metric]:
         p = await create_subprocess_exec("wc", "-l", stdin=PIPE, stdout=PIPE)
         stdout, _ = await p.communicate(tup.blob.data)
