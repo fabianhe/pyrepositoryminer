@@ -1,25 +1,13 @@
 from abc import ABC
 from tempfile import TemporaryDirectory
-from typing import FrozenSet, Optional
+from typing import Optional
 
 from pygit2 import GIT_CHECKOUT_FORCE, Repository
-from pygit2._pygit2 import DiffFile
 
 from pyrepositoryminer.metrics.main import BaseMetric, BaseVisitor
 from pyrepositoryminer.metrics.structs import DirMetricInput
+from pyrepositoryminer.metrics.utils import get_touchedfiles
 from pyrepositoryminer.pobjects import Commit, Object
-
-
-def get_touchedfiles(commit: Commit) -> FrozenSet[DiffFile]:
-    if not commit.parents:
-        return frozenset(
-            delta.new_file for delta in commit.tree.obj.diff_to_tree(swap=True).deltas
-        )
-    return frozenset(
-        delta.new_file
-        for parent in commit.parents
-        for delta in commit.tree.obj.diff_to_tree(parent.tree.obj, swap=True).deltas
-    )
 
 
 class DiffDirVisitor(BaseVisitor):

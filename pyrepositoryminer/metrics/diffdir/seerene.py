@@ -1,7 +1,6 @@
 from asyncio import create_subprocess_exec
 from asyncio.subprocess import PIPE
 from csv import DictReader
-from functools import reduce
 from io import TextIOWrapper
 from json import dump
 from os import getenv
@@ -12,11 +11,7 @@ from zipfile import ZipFile
 
 from pyrepositoryminer.metrics.diffdir.main import DiffDirMetric
 from pyrepositoryminer.metrics.structs import DirMetricInput, Metric, ObjectIdentifier
-from pyrepositoryminer.pobjects import Tree
-
-
-def descend_tree(tree: Tree, obj_name: str) -> str:
-    return reduce(lambda a, b: a[b], obj_name.split("/"), tree).id  # type: ignore
+from pyrepositoryminer.metrics.utils import descend_tree
 
 
 class Seerene(DiffDirMetric):
