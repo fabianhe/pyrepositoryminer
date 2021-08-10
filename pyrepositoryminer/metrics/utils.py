@@ -15,6 +15,7 @@ def get_touchedfiles(commit: Commit) -> FrozenSet[DiffFile]:
         delta.new_file
         for parent in commit.parents
         for delta in commit.tree.obj.diff_to_tree(parent.tree.obj, swap=True).deltas
+        if delta.status_char() != "D"
     )
 
 
