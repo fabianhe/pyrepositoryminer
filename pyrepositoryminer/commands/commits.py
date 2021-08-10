@@ -1,8 +1,8 @@
 from enum import Enum
-from itertools import filterfalse, islice
+from itertools import islice
 from pathlib import Path
 from sys import stdin
-from typing import Hashable, Iterable, Optional, Set, TypeVar
+from typing import Hashable, Iterable, Optional, TypeVar
 
 from pygit2 import (
     GIT_SORT_NONE,
@@ -10,9 +10,8 @@ from pygit2 import (
     GIT_SORT_TIME,
     GIT_SORT_TOPOLOGICAL,
     Repository,
-    Walker,
 )
-from typer import Argument, Option, echo
+from typer import Argument, Option
 
 
 class Sort(str, Enum):
@@ -36,28 +35,6 @@ class Sort(str, Enum):
 T = TypeVar("T", bound=Hashable)
 
 
-def iter_distinct(iterable: Iterable[T]) -> Iterable[T]:
-    seen: Set[T] = set()
-    for element in filterfalse(seen.__contains__, iterable):
-        seen.add(element)
-        yield element
-
-
-def generate_walkers(
-    repo: Repository,
-    branch_names: Iterable[str],
-    simplify_first_parent: bool,
-    sorting: int,
-) -> Iterable[Walker]:
-    walkers = tuple(
-        repo.walk(repo.branches[branch_name].peel().id, sorting)
-        for branch_name in branch_names
-    )
-    for walker in walkers if simplify_first_parent else tuple():
-        walker.simplify_first_parent()
-    yield from walkers
-
-
 def commits(
     repository: Path = Argument(..., help="The path to the bare repository."),
     branches: Path = Argument(
@@ -79,6 +56,13 @@ def commits(
     """Get the commit ids of a repository.
 
     Either provide the branches to get the commit ids from on stdin or as a file argument."""  # pylint: disable=line-too-long
+    from typer import echo  # pylint: disable=import-outside-toplevel
+
+    from pyrepositoryminer.commands.utils.commits import (  # pylint: disable=import-outside-toplevel
+        generate_walkers,
+        iter_distinct,
+    )
+
     branch_names: Iterable[str]
     if branches != Path("-"):
         with open(branches) as f:

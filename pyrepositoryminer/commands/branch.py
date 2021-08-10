@@ -1,8 +1,7 @@
 from pathlib import Path
 from typing import Iterable
 
-from pygit2 import Repository
-from typer import Argument, echo
+from typer import Argument
 
 
 def branch(
@@ -11,6 +10,9 @@ def branch(
     remote: bool = False,
 ) -> None:
     """Get the branches of a repository."""
+    from pygit2 import Repository  # pylint: disable=import-outside-toplevel
+    from typer import echo  # pylint: disable=import-outside-toplevel
+
     repo = Repository(repository)
     branches: Iterable[str]
     if local and remote:
