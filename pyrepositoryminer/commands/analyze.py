@@ -89,4 +89,4 @@ def analyze(
     ) as pool:
         results = (res for res in pool.imap(worker, ids) if res is not None)
         for result in results:
-            echo(result)
+            print(result)
