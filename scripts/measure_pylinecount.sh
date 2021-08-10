@@ -1,0 +1,1 @@
+hyperfine --warmup 1 --runs 3 --export-json out_02_01.json --parameter-list repo numpy,pandas,matplotlib,tensorflow 'pyrepositoryminer branch ./{repo}.git | pyrepositoryminer commits --limit 100 ./{repo}.git | pyrepositoryminer analyze ./{repo}.git pylinecount'
