@@ -1,0 +1,1 @@
+hyperfine --warmup 1 --runs 3 --export-json out_02_02.json --parameter-list repo numpy,pandas,matplotlib,tensorflow 'python ~/Repositories/pyrepositoryminer/pydrillertest/main.py ./{repo}.git'
