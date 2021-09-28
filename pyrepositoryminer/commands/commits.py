@@ -65,7 +65,7 @@ def commits(
 
     branch_names: Iterable[str]
     if branches != Path("-"):
-        with open(branches) as f:
+        with open(branches, encoding="utf-8") as f:
             branch_names = list(f)
     else:
         branch_names = (line for line in stdin)
