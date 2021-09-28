@@ -13,19 +13,9 @@ from pyrepositoryminer.metrics.structs import (
 class Raw(NativeBlobMetric):
     filter = NativeBlobFilter(NativeBlobFilter.endswith(".py"))
 
-    async def cache_hit(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
-        return [
-            Metric(
-                self.name,
-                None,
-                True,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
-            )
-        ]
-
-    async def analyze(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
+    async def analyze(self, tup: NativeBlobMetricInput) -> Iterable[Metric]:
         try:
-            r_data = analyze(blob_tup.blob.data.decode())
+            r_data = analyze(tup.blob.data.decode())
         except (SyntaxError, UnicodeDecodeError):
             return []  # TODO get an error output?
         result = [
@@ -33,7 +23,7 @@ class Raw(NativeBlobMetric):
                 self.name,
                 r_data._asdict(),
                 False,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
+                ObjectIdentifier(tup.blob.id, tup.path),
             )
         ]
         return result

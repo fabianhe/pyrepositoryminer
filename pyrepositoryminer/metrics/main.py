@@ -35,8 +35,7 @@ class BaseMetric(Generic[T], ABC):
     async def __call__(self, tup: T) -> Iterable[Metric]:
         if tup.is_cached:
             return await self.cache_hit(tup)
-        else:
-            return await self.analyze(tup)
+        return await self.analyze(tup)
 
     @classmethod
     @property

@@ -11,25 +11,15 @@ from pyrepositoryminer.metrics.structs import (
 class Linelength(NativeBlobMetric):
     filter = NativeBlobFilter(NativeBlobFilter.is_binary())
 
-    async def cache_hit(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
-        return [
-            Metric(
-                self.name,
-                None,
-                True,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
-            )
-        ]
-
-    async def analyze(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
+    async def analyze(self, tup: NativeBlobMetricInput) -> Iterable[Metric]:
         result = [
             Metric(
                 self.name,
                 len(line),
                 False,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
+                ObjectIdentifier(tup.blob.id, tup.path),
                 f"L{i+1}",
             )
-            for i, line in enumerate(blob_tup.blob.obj.data.split(b"\n"))
+            for i, line in enumerate(tup.blob.obj.data.split(b"\n"))
         ]
         return result

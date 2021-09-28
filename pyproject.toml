@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyrepositoryminer"
-version = "0.7.0"
+version = "0.8.0"
 description = "Efficient Repository Mining in Python"
 license = "GPL-3.0-or-later"
 authors = ["Fabian Heseding <39628987+fabianhe@users.noreply.github.com>"]
@@ -13,7 +13,7 @@ documentation = "https://github.com/fabianhe/pyrepositoryminer/blob/master/DOCS.
 pyrepositoryminer = "pyrepositoryminer:app"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 pygit2 = "^1.5.0"
 typer = {extras = ["all"], version = "^0.3.2"}
 radon = "^4.5.0"
@@ -27,6 +27,8 @@ flake8 = "^3.9.1"
 isort = "^5.8.0"
 pre-commit = "^2.12.1"
 typer-cli = "^0.0.11"
+pylint = "^2.9.3"
+scalene = "^1.3.12"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -13,19 +13,9 @@ from pyrepositoryminer.metrics.structs import (
 class Halstead(NativeBlobMetric):
     filter = NativeBlobFilter(NativeBlobFilter.endswith(".py"))
 
-    async def cache_hit(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
-        return [
-            Metric(
-                self.name,
-                None,
-                True,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
-            )
-        ]
-
-    async def analyze(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
+    async def analyze(self, tup: NativeBlobMetricInput) -> Iterable[Metric]:
         try:
-            h_data = h_visit(blob_tup.blob.data.decode())
+            h_data = h_visit(tup.blob.data.decode())
         except (SyntaxError, UnicodeDecodeError):
             return []  # TODO get an error output?
         result = [
@@ -33,7 +23,7 @@ class Halstead(NativeBlobMetric):
                 self.name,
                 fn_data._asdict(),
                 False,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
+                ObjectIdentifier(tup.blob.id, tup.path),
                 fn_name,
             )
             for fn_name, fn_data in h_data.functions
@@ -43,7 +33,7 @@ class Halstead(NativeBlobMetric):
                 self.name,
                 h_data.total._asdict(),
                 False,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
+                ObjectIdentifier(tup.blob.id, tup.path),
             )
         )
         return result

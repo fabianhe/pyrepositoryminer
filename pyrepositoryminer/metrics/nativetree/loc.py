@@ -6,9 +6,9 @@ from pyrepositoryminer.pobjects import Blob, Object, Tree
 
 
 class Loc(NativeTreeMetric):
-    async def analyze(self, tree_tup: NativeTreeMetricInput) -> Iterable[Metric]:
+    async def analyze(self, tup: NativeTreeMetricInput) -> Iterable[Metric]:
         n = 0
-        q: List[Object] = [tree_tup.tree]
+        q: List[Object] = [tup.tree]
         while q:
             obj = q.pop(0)
             if isinstance(obj, Blob):

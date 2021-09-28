@@ -27,23 +27,13 @@ from pyrepositoryminer.metrics.structs import (
 class Nesting(NativeBlobMetric):
     filter = NativeBlobFilter(NativeBlobFilter.endswith(".py"))
 
-    async def cache_hit(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
-        return [
-            Metric(
-                self.name,
-                None,
-                True,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
-            )
-        ]
-
-    async def analyze(self, blob_tup: NativeBlobMetricInput) -> Iterable[Metric]:
+    async def analyze(self, tup: NativeBlobMetricInput) -> Iterable[Metric]:
         result = [
             Metric(
                 self.name,
-                NestingASTVisitor().visit(parse(blob_tup.blob.obj.data)).result,
+                NestingASTVisitor().visit(parse(tup.blob.obj.data)).result,
                 False,
-                ObjectIdentifier(blob_tup.blob.id, blob_tup.path),
+                ObjectIdentifier(tup.blob.id, tup.path),
             )
         ]
         return result
