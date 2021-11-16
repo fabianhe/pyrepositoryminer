@@ -1,10 +1,13 @@
-FROM python:latest
+FROM python:3.10-bullseye
 
 WORKDIR /app
 
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | POETRY_HOME=/opt/poetry python && \
-    cd /usr/local/bin && \
-    ln -s /opt/poetry/bin/poetry && \
+RUN apt update && apt install -y libgit2-dev
+
+#RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | POETRY_HOME=/opt/poetry python && \
+#    cd /usr/local/bin && \
+#    ln -s /opt/poetry/bin/poetry && \
+RUN pip install poetry && \
     poetry config virtualenvs.create false
 
 COPY ./pyproject.toml ./poetry.lock README.md /app/
@@ -14,3 +17,5 @@ COPY ./executables /app/executables
 ENV EXECUTABLES=/app/executables
 ENV PYTHONPATH=/app
 RUN pip install .
+
+ENTRYPOINT [ "/usr/bin/env", "python3", "pyrepositoryminer"]
