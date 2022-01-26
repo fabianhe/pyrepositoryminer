@@ -11,6 +11,21 @@ if TYPE_CHECKING:
     from multiprocessing.pool import Pool as tcpool
 
 
+class single_worker_Pool:
+    def __init__(self) -> None:
+        pass
+
+    @staticmethod
+    def imap(worker, ids):  # type: ignore
+        yield from map(worker, ids)
+
+    def __enter__(self):  # type: ignore
+        return self
+
+    def __exit__(self, *args):  # type: ignore
+        return self
+
+
 @contextmanager
 def make_pool(
     workers: int,
@@ -30,6 +45,18 @@ def make_pool(
     from pyrepositoryminer.metrics import (  # pylint: disable=import-outside-toplevel
         all_metrics,
     )
+
+    if workers <= 1:
+        initialize(
+            InitArgs(
+                repository,
+                tuple({metric.value for metric in metrics} & all_metrics.keys()),
+                tuple(map(import_metric, set(custom_metrics))),
+            )
+        )
+        with single_worker_Pool() as pool:
+            yield pool
+        return
 
     with Pool(
         max(workers, 1),
