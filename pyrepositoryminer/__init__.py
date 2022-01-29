@@ -1,5 +1,4 @@
-__version__ = "0.8.0"
-
+__version__ = "0.9.1"
 from typer import Typer
 
 from pyrepositoryminer.commands import analyze, branch, clone, commits
