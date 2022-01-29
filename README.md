@@ -3,6 +3,7 @@
 [![CI workflow](https://github.com/fabianhe/pyrepositoryminer/actions/workflows/test.yaml/badge.svg)](https://github.com/fabianhe/pyrepositoryminer/actions/workflows/test.yaml)
 [![PyPI Python version](https://img.shields.io/pypi/pyversions/pyrepositoryminer?color=000000)](https://pypi.org/project/pyrepositoryminer/)
 [![PyPI package](https://img.shields.io/pypi/v/pyrepositoryminer?color=%23000)](https://pypi.org/project/pyrepositoryminer/)
+[![DOI](https://zenodo.org/badge/359453860.svg)](https://zenodo.org/badge/latestdoi/359453860)
 [![Tokei](https://tokei.rs/b1/github/fabianhe/pyrepositoryminer)](https://tokei.rs)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![PyPI downloads](https://img.shields.io/pypi/dm/pyrepositoryminer?color=000000)](https://pypi.org/project/pyrepositoryminer/)
