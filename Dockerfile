@@ -13,8 +13,6 @@ RUN pip install poetry && \
 COPY ./pyproject.toml ./poetry.lock README.md /app/
 RUN poetry install --no-root --no-dev --no-interaction --no-ansi
 COPY ./pyrepositoryminer /app/pyrepositoryminer
-COPY ./executables /app/executables
-ENV EXECUTABLES=/app/executables
 ENV PYTHONPATH=/app
 RUN pip install .
 
